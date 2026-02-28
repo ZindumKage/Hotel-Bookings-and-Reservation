@@ -319,25 +319,6 @@ Invalid transitions return validation errors.
 
 ---
 
-# 🚢 Production Deployment
-
-Recommended:
-
-* Docker containerization
-* PostgreSQL database
-* Reverse proxy (Nginx)
-* HTTPS termination
-* Environment secrets manager
-* CI/CD pipeline
-
-Example Docker build:
-
-```
-docker build -t hotel-api .
-docker run -p 8080:8080 hotel-api
-```
-
----
 
 
 
