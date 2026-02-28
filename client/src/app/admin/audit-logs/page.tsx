@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Navbar from "@/components/Navbar";
 import api from "@/lib/api";
+import AnalyticsCharts from "@/components/AnalyticsCharts";
 
 interface AuditLog {
   id: string;
@@ -24,7 +25,17 @@ export default function AuditLogsPage() {
   return (
     <div className="min-h-screen bg-neutral-100">
       <Navbar />
+   <div className="min-h-screen bg-neutral-100 p-8">
+      <h1 className="text-3xl font-bold mb-6">
+        Enterprise Security Audit Dashboard
+      </h1>
 
+      {/* Analytics Charts */}
+      <AnalyticsCharts />
+
+      {/* Export Buttons + Audit Table */}
+      ...
+    </div>
       <div className="pt-28 max-w-6xl mx-auto px-4">
         <h1 className="text-3xl font-semibold mb-6">Audit Logs</h1>
 
