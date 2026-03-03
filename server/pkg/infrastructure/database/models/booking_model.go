@@ -1,26 +1,36 @@
- package models
+package models
 
-// import (
-// 	"time"
-// 	"gorm.io/gorm"
-// )
+import (
+	"time"
 
-// type Booking struct {
-// 	gorm.Model
+	"gorm.io/gorm"
+)
 
-// 	UserID uint `gorm:"not null;index"`
-// 	RoomID uint `gorm:"not null;index"`
+type Booking struct {
+	gorm.Model
 
-// 	CheckInDate  time.Time `gorm:"not null"`
-// 	CheckOutDate time.Time `gorm:"not null"`
+	ID        uint   `gorm:"primaryKey"`
+	Reference string `gorm:"uniqueIndex;not null"`
 
-// 	Status        BookingStatus `gorm:"type:varchar(20);default:'PENDING'"`
-// 	PaymentStatus PaymentStatus `gorm:"type:varchar(20);default:'PENDING'"`
+	UserID     uint   `gorm:"not null"`
+	RoomID     uint   `gorm:"index:idx_room;not null"`
+	RoomNumber string `gorm:"not null"`
 
-// 	TotalPrice int64 `gorm:"not null"`
+	CheckInDate  time.Time `gorm:"index:idx_room_dates;not null"`
+	CheckOutDate time.Time `gorm:"index:idx_room_dates;not null"`
 
-// 	User User `gorm:"foreignKey:UserID"`
-// 	Room Room `gorm:"foreignKey:RoomID"`
+	NightCount int    `gorm:"not null"`
+	UnitPrice  int64  `gorm:"not null"`
+	TaxAmount  int64  `gorm:"not null"`
+	Discount   int64  `gorm:"not null"`
+	TotalPrice int64  `gorm:"not null"`
+	Currency   string `gorm:"type:varchar(10);not null"`
 
-// 	Payment Payment
-// }
+	Status        string `gorm:"type:varchar(50);index;not null"`
+	PaymentStatus string `gorm:"type:varchar(50);index;not null"`
+
+	ExpiresAt   time.Time `gorm:"not null"`
+	CancelledAt *time.Time
+
+	
+}

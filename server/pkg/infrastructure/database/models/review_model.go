@@ -1,23 +1,23 @@
 package models
 
-// import (
-// 	"time"
+import (
+	"time"
 
-// 	"github.com/OctoetIx/Hotel-Bookings-and-Reservation/pkg/domain/common"
-// 	"gorm.io/gorm"
-// )
+	
+	"gorm.io/gorm"
+)
 
-// type Review struct {
-// 	gorm.Model
+type Review struct {
+	gorm.Model
 
-// 	UserID uint `gorm:"not null"`
-// 	RoomID uint `gorm:"not null"`
+	UserID uint `gorm:"not null"`
+	RoomID uint `gorm:"not null"`
 
-// 	Rating  int    `gorm:"not null"`
-// 	Comment string
+	Rating  int    `gorm:"not null;check:rating >= 1 AND <= 5"`
+	Comment string	`gorm:"text"`
 
-// 	CreatedAt time.Time
+	CreatedAt time.Time
 
-// 	User common.User `gorm:"foreignKey:UserID"`
-// 	Room common.Room`gorm:"foreignKey:RoomID"`
-// }
+	User UserModel `gorm:"foreignKey:UserID"`
+	Room Room`gorm:"foreignKey:RoomID"`
+}

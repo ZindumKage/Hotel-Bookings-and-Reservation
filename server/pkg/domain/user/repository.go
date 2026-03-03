@@ -5,4 +5,7 @@ type Repository interface {
 	FindByEmail(email string) (*User, error)
 	FindByID(id uint) (*User, error)
 	FindAll() ([]*User, error)
+	Update(user *User) error
+
+	saveVerificationToken()
 }

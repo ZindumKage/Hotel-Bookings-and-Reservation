@@ -25,7 +25,7 @@ This project demonstrates how to build a **scalable hotel reservation system** u
 ✔ Service Layer Testing
 ✔ Separation of Concerns
 
-The backend exposes business logic via structured services and repositories, while the frontend provides a responsive user interface for managing rooms and bookings.
+The backend exposes business logic via structured services and repositories, while the frontend provides a responsive user interface for managing rooms and bookings. 
 
 ---
 

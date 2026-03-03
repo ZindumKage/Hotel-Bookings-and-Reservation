@@ -73,7 +73,6 @@ func (r *mutationResolver) CreateReview(ctx context.Context, input model.CreateR
 
 // CreateRoom is the resolver for the createRoom field.
 func (r *mutationResolver) CreateRoom(ctx context.Context, input model.CreateRoomInput) (*model.Room, error) {
-
 	room := &room.Room{
 		Name:        input.Name,
 		Description: valueOrEmpty(input.Description),
@@ -91,7 +90,6 @@ func (r *mutationResolver) CreateRoom(ctx context.Context, input model.CreateRoo
 
 // UpdateRoomStatus is the resolver for the updateRoomStatus field.
 func (r *mutationResolver) UpdateRoomStatus(ctx context.Context, roomID string, status model.RoomStatus) (*model.Room, error) {
-
 	id, err := strconv.Atoi(roomID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid room id: %s", roomID)
@@ -115,7 +113,25 @@ func (r *mutationResolver) UpdateRoomStatus(ctx context.Context, roomID string, 
 
 // ConfirmBooking is the resolver for the confirmBooking field.
 func (r *mutationResolver) ConfirmBooking(ctx context.Context, id string) (*model.Booking, error) {
-	panic(fmt.Errorf("not implemented: ConfirmBooking - confirmBooking"))
+	user, err := GetUserFromCtx(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("unauthenticated")
+	}
+	if user.Role != "ADMIN" {
+		return nil, fmt.Errorf("forbidden")
+	}
+bookingID, err := strconv.Atoi(id)
+if err != nil {
+	return nil, fmt.Errorf("invalid booking id: %s", id)
+}
+if err := r.BookingService.ConfirmPaymentAndBooking(uint(bookingID)); err != nil {
+	return nil, err
+}
+b, err := r.BookingService.GetBookingByID(uint(bookingID))
+if err != nil {
+	return nil, err
+}
+return MapToGraphQLBooking(b), nil
 }
 
 // ApproveRoom is the resolver for the approveRoom field.
@@ -131,21 +147,18 @@ func (r *mutationResolver) ApproveRoom(ctx context.Context, roomID string) (*mod
 	}
 
 	return &model.Room{
-		ID:         fmt.Sprintf("%d", rm.ID),
-		Name:       rm.Name,
+		ID:          fmt.Sprintf("%d", rm.ID),
+		Name:        rm.Name,
 		Description: &rm.Description,
-		Price:      rm.Price,
-		Status:     model.RoomStatus(rm.Status),
-		RoomNumber: rm.RoomNumber,
-		Amenities:  rm.Amenities,
+		Price:       rm.Price,
+		Status:      model.RoomStatus(rm.Status),
+		RoomNumber:  rm.RoomNumber,
+		Amenities:   rm.Amenities,
 	}, nil
-
 }
 
 // RejectRoom is the resolver for the rejectRoom field.
 func (r *mutationResolver) RejectRoom(ctx context.Context, roomID string) (*model.Room, error) {
-
-
 	id, err := strconv.Atoi(roomID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid room id")
@@ -157,15 +170,14 @@ func (r *mutationResolver) RejectRoom(ctx context.Context, roomID string) (*mode
 	}
 
 	return &model.Room{
-		ID:         fmt.Sprintf("%d", rm.ID),
-		Name:       rm.Name,
+		ID:          fmt.Sprintf("%d", rm.ID),
+		Name:        rm.Name,
 		Description: &rm.Description,
-		Price:      rm.Price,
-		Status:     model.RoomStatus(rm.Status),
-		RoomNumber: rm.RoomNumber,
-		Amenities:  rm.Amenities,
+		Price:       rm.Price,
+		Status:      model.RoomStatus(rm.Status),
+		RoomNumber:  rm.RoomNumber,
+		Amenities:   rm.Amenities,
 	}, nil
-
 }
 
 // PromoteToAdmin is the resolver for the promoteToAdmin field.
@@ -185,7 +197,6 @@ func (r *queryResolver) Me(ctx context.Context) (*model.User, error) {
 
 // Room is the resolver for the single room field.
 func (r *queryResolver) Room(ctx context.Context, id string) (*model.Room, error) {
-
 	roomID, err := strconv.Atoi(id)
 	if err != nil {
 		return nil, fmt.Errorf("invalid room id")
@@ -247,27 +258,48 @@ func (r *queryResolver) Rooms(ctx context.Context, status *model.RoomStatus, pag
 	}
 
 	return &model.RoomConnection{
-		Rooms:  gqlRooms,
-		Total:  int32(total),
-		Page:   int32(page),
-		Limit:  int32(limit),
+		Rooms: gqlRooms,
+		Total: int32(total),
+		Page:  int32(page),
+		Limit: int32(limit),
 	}, nil
 }
 
 // MyBookings is the resolver for the myBookings field.
 func (r *queryResolver) MyBookings(ctx context.Context) ([]*model.Booking, error) {
-	panic(fmt.Errorf("not implemented: MyBookings - myBookings"))
+	user, err := GetUserFromCtx(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("unauthenticated")
+	}
+	bookings, err := r.BookingService.GetBookingsByUserID(user.ID)
+	if err != nil {
+		return nil, err
+	}
+	return MapToGraphQLBookings(bookings), nil
 }
 
 // Booking is the resolver for the booking field.
 func (r *queryResolver) Booking(ctx context.Context, id string) (*model.Booking, error) {
-	panic(fmt.Errorf("not implemented: Booking - booking"))
+	user, err := GetUserFromCtx(ctx)
+	if err != nil {
+		return nil, err
+	}
+bookingID, err := strconv.Atoi(id)
+if err != nil {
+	return nil, fmt.Errorf("invalid booking id")
 }
-
+b,err := r.BookingService.GetBookingByID(uint(bookingID))
+if err != nil {
+	return nil, err
+}
+ if user.Role != "ADMIN" && b.UserID != user.ID {
+	return nil, fmt.Errorf("forbidden")
+}
+return MapToGraphQLBooking(b), nil
+}
 // Users is the resolver for the users field.
 func (r *queryResolver) Users(ctx context.Context) ([]*model.User, error) {
-	
-users, err := r.UserService.GetAllUsers()
+	users, err := r.UserService.GetAllUsers()
 	if err != nil {
 		return nil, err
 	}
@@ -281,7 +313,6 @@ users, err := r.UserService.GetAllUsers()
 		}
 	}
 	return result, nil
-
 }
 
 // User is the resolver for the user field.
@@ -311,7 +342,18 @@ func (r *queryResolver) AdminBookings(ctx context.Context) ([]*model.Booking, er
 
 // AllBookings is the resolver for the allBookings field.
 func (r *queryResolver) AllBookings(ctx context.Context) ([]*model.Booking, error) {
-	panic(fmt.Errorf("not implemented: AllBookings - allBookings"))
+	user, err := GetUserFromCtx(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("unauthenticated")
+	}
+	if user.Role != "ADMIN" {
+		return nil, fmt.Errorf("forbidden")
+	}
+	bookings, _, err := r.BookingService.ListBookings(1, 1000)
+	if err != nil {
+		return nil, err
+	}
+	return MapToGraphQLBookings(bookings), nil
 }
 
 // AuditLogs is the resolver for the auditLogs field.

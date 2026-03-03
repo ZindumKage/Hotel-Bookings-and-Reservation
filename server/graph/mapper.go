@@ -1,10 +1,13 @@
 package graph
 
 import (
+	"fmt"
 	"strconv"
 
 	"github.com/OctoetIx/Hotel-Bookings-and-Reservation/graph/model"
 	"github.com/OctoetIx/Hotel-Bookings-and-Reservation/pkg/domain/audit_logs"
+	"github.com/OctoetIx/Hotel-Bookings-and-Reservation/pkg/domain/booking"
+
 	"github.com/OctoetIx/Hotel-Bookings-and-Reservation/pkg/domain/room"
 )
 
@@ -29,7 +32,7 @@ func convertAuditLogs(logs []audit_logs.AuditLog) []*model.AuditLog {
 	return result
 }
 
-// 
+//
 
 // func mapRoomsToGraphQL(domainRooms []room.Room) []*model.Room {
 // 	gqlRooms := make([]*model.Room, len(domainRooms))
@@ -52,9 +55,40 @@ func MapToGraphQLRoom(r *room.Room) *model.Room {
 		ID:          strconv.Itoa(int(r.ID)),
 		Name:        r.Name,
 		Description: &r.Description,
-		Price:       r.Price, 
+		Price:       r.Price,
 		Status:      model.RoomStatus(r.Status),
 		RoomNumber:  r.RoomNumber,
 		Amenities:   r.Amenities,
+	}
+}
+
+func MapToGraphQLBookings(bookings []booking.Booking) []*model.Booking {
+	var result []*model.Booking
+	for i := range bookings {
+		b := bookings[i]
+		result = append(result, MapToGraphQLBooking(&b))
+	}
+	return result
+}
+
+func MapToGraphQLBooking(b *booking.Booking) *model.Booking {
+
+	return &model.Booking{
+		ID:            fmt.Sprintf("%d", b.ID),
+		Reference:     b.Reference,
+		User:          fmt.Sprintf("%d", b.UserID),
+		RoomID:        fmt.Sprintf("%d", b.RoomID),
+		RoomNumber:    b.RoomNumber,
+		CheckInDate:   b.CheckInDate,
+		CheckOutDate:  b.CheckOutDate,
+		NightCount:    int64(b.NightCount),
+		UnitPrice:     &b.UnitPrice,
+		TaxAmount:     &b.TaxAmount,
+		Discount:      &b.Discount,
+		TotalPrice:    int64(b.TotalPrice),
+		Status:        model.BookingStatus(b.Status),
+		PaymentStatus: model.PaymentStatus(b.PaymentStatus),
+		ExpiresAt:     b.ExpiresAt,
+		CancelledAt:   b.CancelledAt,
 	}
 }

@@ -5,6 +5,7 @@ import (
 
 	domain "github.com/OctoetIx/Hotel-Bookings-and-Reservation/pkg/domain/user"
 	usecase "github.com/OctoetIx/Hotel-Bookings-and-Reservation/pkg/usecase/user"
+	"github.com/stretchr/testify/mock"
 )
 
 // Mock repository
@@ -29,9 +30,16 @@ func (m *mockRepo) FindByID(id uint) (*domain.User, error) {
 	return nil, nil
 }
 
+func (m *mockRepo) FindAll() ([]*domain.User, error) {
+	var result []*domain.User
+	for _, u := range m.users {
+		result = append(result, u)
+	}
+	return result, nil
+}
 func TestRegisterUser(t *testing.T) {
 	mock := &mockRepo{users: make(map[string]*domain.User)}
-	service := usecase.NewService(mock) // <--- use the usecase package
+	service := usecase.NewService(mock)
 
 	user, err := service.Register("Stanley", "stan@test.com", "password")
 	if err != nil {
@@ -67,3 +75,10 @@ func TestLoginUser(t *testing.T) {
 
 	t.Logf("Test passed! Logged in user: %+v", user)
 }		
+
+func TestGetUserByID(t *testing.T) {
+	mock := &mockRepo{users: make(map[string]*domain.User)}
+	service := usecase.NewService(mock)
+	_, err := service.GetUserByID()
+
+}

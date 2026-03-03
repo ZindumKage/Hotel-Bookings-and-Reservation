@@ -59,13 +59,22 @@ type Room {
 
 type Booking {
   id: ID!
-  user: User!
-  room: Room!
+  user: ID!
+  roomId: ID!
   checkInDate: Time!
   checkOutDate: Time!
   status: BookingStatus!
   paymentStatus: PaymentStatus!
   totalPrice: Int64!
+  reference: String!
+  roomNumber: String!
+  expiresAt: Time!
+  cancelledAt: Time
+  nightCount: Int64!
+  unitPrice: Int64
+  taxAmount: Int64
+  discount: Int64
+
 }
 
 type Review {

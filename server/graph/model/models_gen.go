@@ -49,13 +49,21 @@ type AuthPayload struct {
 
 type Booking struct {
 	ID            string        `json:"id"`
-	User          *User         `json:"user"`
-	Room          *Room         `json:"room"`
+	User          string        `json:"user"`
+	RoomID        string        `json:"roomId"`
 	CheckInDate   time.Time     `json:"checkInDate"`
 	CheckOutDate  time.Time     `json:"checkOutDate"`
 	Status        BookingStatus `json:"status"`
 	PaymentStatus PaymentStatus `json:"paymentStatus"`
 	TotalPrice    int64         `json:"totalPrice"`
+	Reference     string        `json:"reference"`
+	RoomNumber    string        `json:"roomNumber"`
+	ExpiresAt     time.Time     `json:"expiresAt"`
+	CancelledAt   *time.Time    `json:"cancelledAt,omitempty"`
+	NightCount    int64         `json:"nightCount"`
+	UnitPrice     *int64        `json:"unitPrice,omitempty"`
+	TaxAmount     *int64        `json:"taxAmount,omitempty"`
+	Discount      *int64        `json:"discount,omitempty"`
 }
 
 type CreateBookingInput struct {

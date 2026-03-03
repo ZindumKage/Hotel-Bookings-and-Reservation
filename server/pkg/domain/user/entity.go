@@ -3,6 +3,18 @@ package user
 import (
 	"time"
 	"github.com/OctoetIx/Hotel-Bookings-and-Reservation/pkg/domain/common"
+	"errors"
+)
+
+
+var (
+	ErrUserNotFound        = errors.New("user not found")
+	ErrInvalidCredentials  = errors.New("invalid credentials")
+	ErrEmailAlreadyExists  = errors.New("email already exists")
+	ErrUserInactive        = errors.New("user account is inactive")
+	ErrAccountLocked 	   = errors.New("account is temporarily locked")
+	ErrEmailNotVerified	   = errors.New("email not verified")
+	ErrRateLimited         = errors.New("too many login attempts, try again later")
 )
 
 type User struct {
@@ -12,6 +24,15 @@ type User struct {
 	Password  string
 	Role      common.Role
 	IsActive  bool
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	IsEmailVerified bool
+
+	FailedLoginAttempts int
+	AccountLockedUntil *time.Time
+}
+
+type EmailVerification struct {
+	ID uint
+	UserID uint
+	Token string
+	ExpiresAt time.Time
 }

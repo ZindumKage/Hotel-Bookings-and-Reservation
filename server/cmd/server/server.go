@@ -3,6 +3,7 @@ package server
 import (
 	"log"
 	"os"
+	"time"
 
 	"github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/handler/extension"
@@ -12,9 +13,10 @@ import (
 	"github.com/gofiber/adaptor/v2"
 	"github.com/gofiber/fiber/v2"
 	"github.com/joho/godotenv"
-	"github.com/vektah/gqlparser/v2/ast"
+	
 
 	"github.com/OctoetIx/Hotel-Bookings-and-Reservation/graph"
+	"github.com/OctoetIx/Hotel-Bookings-and-Reservation/pkg/application/booking"
 	"github.com/OctoetIx/Hotel-Bookings-and-Reservation/pkg/config"
 )
 
@@ -44,6 +46,7 @@ func Start() {
 		),
 	)
 
+
 	// GraphQL config (same as your net/http version)
 	srv.AddTransport(transport.Options{})
 	srv.AddTransport(transport.GET{})
@@ -55,6 +58,11 @@ func Start() {
 	srv.Use(extension.AutomaticPersistedQuery{
 		Cache: lru.New,
 	})
+
+		// Workers 
+	expiryWorker := booking.NewExpiryWorker(bookingRepo)
+	expiryWorker.Start(1 *time.Minute)
+
 
 	// Routes
 	app.All("/query", adaptor.HTTPHandler(srv))

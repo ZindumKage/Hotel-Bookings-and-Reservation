@@ -1,21 +1,34 @@
-package models
+package review
 
 import (
+	"errors"
 	"time"
-	"gorm.io/gorm"
 )
 
-type Review struct {
-	gorm.Model
 
-	UserID uint `gorm:"not null"`
-	RoomID uint `gorm:"not null"`
 
-	Rating  int    `gorm:"not null"`
+type Review struct{
+	ID    uint
+	UserID uint
+	
+	RoomID  uint
 	Comment string
-
+	Rating int
 	CreatedAt time.Time
+	UpdatedAt time.Time
+	DeletedAt time.Time
 
-	User User `gorm:"foreignKey:UserID"`
-	Room Room `gorm:"foreignKey:RoomID"`
+}
+
+func (r *Review) Validate()error{
+	if r.Rating < 1 || r.Rating > 5 {
+		return errors.New("rating must be between 1 and 5 stars")
+	}
+	if r.RoomID == 0 {
+		return errors.New("room id required")
+	}
+	if r.UserID == 0{
+		return errors.New("user id required")
+	}
+	return nil
 }

@@ -12,6 +12,8 @@ type Room struct {
 	Price       int64  `gorm:"type:decimal(10,2);not null"`
 	Amenities   string  `gorm:"type:text"` // Comma-separated list of amenities
 	RoomNumber  string  `gorm:"type:varchar(50);not null;unique"`
+
+	Reviews  []Review  `gorm:"foreignKey:RoomID"`
 }
 
 func (Room) TableName() string {
