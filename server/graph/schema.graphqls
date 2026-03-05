@@ -1,7 +1,17 @@
 scalar Time
 scalar Int64
 
+# ========================
+# INTERFACES
+# ========================
+
+interface Node {
+  id: ID!
+}
+
+# ========================
 # ENUMS
+# ========================
 
 enum Role {
   USER
@@ -31,9 +41,18 @@ enum PaymentStatus {
   REFUNDED
 }
 
-# USER TYPES
+enum PaymentProvider {
+  STRIPE
+  PAYSTACK
+  FLUTTERWAVE
+  PAYPAL
+}
 
-type User {
+# ========================
+# CORE TYPES
+# ========================
+
+type User implements Node {
   id: ID!
   name: String!
   email: String!
@@ -41,61 +60,100 @@ type User {
   isActive: Boolean!
   createdAt: Time!
   updatedAt: Time!
+  deletedAt: Time
+
   reviews: [Review!]
   bookings: [Booking!]
 }
 
-type Room {
+type Room implements Node {
   id: ID!
   name: String!
   description: String
   price: Int64!
   status: RoomStatus!
-  bookings: [Booking!]
+
   roomNumber: String!
   amenities: [String!]
+
+  images: [RoomImage!]
+
+  bookings: [Booking!]
   reviews: [Review!]
+
+  createdAt: Time!
+  updatedAt: Time!
+  deletedAt: Time
 }
 
-type Booking {
+type RoomImage implements Node {
   id: ID!
-  user: ID!
   roomId: ID!
+  url: String!
+  isPrimary: Boolean!
+}
+
+type Booking implements Node {
+  id: ID!
+
+  user: User!
+  room: Room!
+
   checkInDate: Time!
   checkOutDate: Time!
+
   status: BookingStatus!
   paymentStatus: PaymentStatus!
+
   totalPrice: Int64!
+
   reference: String!
-  roomNumber: String!
+
   expiresAt: Time!
   cancelledAt: Time
+
   nightCount: Int64!
   unitPrice: Int64
   taxAmount: Int64
   discount: Int64
 
-}
-
-type Review {
-  id: ID!
-  user: User!
-  room: Room!
-  rating: Int!
-  comment: String
   createdAt: Time!
 }
 
-# PAYMENT
-type Payment {
+type Review implements Node {
   id: ID!
+
+  user: User!
+  room: Room!
+
+  rating: Int!
+  comment: String
+
+  createdAt: Time!
+}
+
+# ========================
+# PAYMENT
+# ========================
+
+type Payment implements Node {
+  id: ID!
+
   booking: Booking!
+
   amount: Int64!
+
+  provider: PaymentProvider!
+  transactionReference: String!
+
   status: PaymentStatus!
+
   paymentDate: Time!
 }
 
-# AUTH TYPES
+# ========================
+# AUTH
+# ========================
 
 type AuthPayload {
   accessToken: String!
@@ -103,23 +161,63 @@ type AuthPayload {
   user: User!
 }
 
-## --------------- SYSTEM AUDIT (SUPER ADMIN) ---------------
+# ========================
+# SYSTEM AUDIT
+# ========================
 
-type AuditLog {
+type AuditLog implements Node {
   id: ID!
+
   userId: ID!
   userEmail: String
   userRole: String
+
   action: String!
   entity: String!
   entityId: String
+
   riskLevel: String
   suspicious: Boolean
   reason: String
+
   createdAt: Time!
 }
 
-# -------------- INPUT TYPES --------------
+# ========================
+# CONNECTION TYPES
+# ========================
+
+type UserConnection {
+  users: [User!]!
+  total: Int!
+  page: Int!
+  limit: Int!
+}
+
+type RoomConnection {
+  rooms: [Room!]!
+  total: Int!
+  page: Int!
+  limit: Int!
+}
+
+type BookingConnection {
+  bookings: [Booking!]!
+  total: Int!
+  page: Int!
+  limit: Int!
+}
+
+type AuditLogConnection {
+  logs: [AuditLog!]!
+  total: Int!
+  page: Int!
+  limit: Int!
+}
+
+# ========================
+# INPUT TYPES
+# ========================
 
 input RegisterInput {
   name: String!
@@ -144,7 +242,7 @@ input UpdateRoomInput {
   id: ID!
   name: String
   description: String
-  price: Int64!
+  price: Int64
   status: RoomStatus
   roomNumber: String
   amenities: [String!]
@@ -159,12 +257,18 @@ input CreateBookingInput {
 input MakePaymentInput {
   bookingId: ID!
   amount: Int64!
+  provider: PaymentProvider!
 }
 
 input CreateReviewInput {
   roomId: ID!
   rating: Int!
   comment: String
+}
+
+input PaginationInput {
+  page: Int = 1
+  limit: Int = 20
 }
 
 input AuditLogFilterInput {
@@ -177,47 +281,35 @@ input AuditLogFilterInput {
   endDate: Time
 }
 
-input PaginationInput {
-  page: Int = 1
-  limit: Int = 20
-}
-
-type AuditLogConnection {
-  logs: [AuditLog!]!
-  total: Int!
-  page: Int!
-  limit: Int!
-}
-
-type RoomConnection {
-  rooms: [Room!]!
-  total: Int!
-  page: Int!
-  limit: Int!
-}
-
-# -------------- QUERIES --------------
+# ========================
+# QUERIES
+# ========================
 
 type Query {
-  # AUTH USER
+  # AUTH
   me: User!
 
   # ROOMS
-
   room(id: ID!): Room
   rooms(status: RoomStatus, pagination: PaginationInput): RoomConnection!
 
+  roomAvailability(
+    roomId: ID!
+    checkInDate: Time!
+    checkOutDate: Time!
+  ): Boolean!
+
   # BOOKINGS
-  myBookings: [Booking!]!
+  myBookings(pagination: PaginationInput): BookingConnection!
   booking(id: ID!): Booking!
 
   # ADMIN
-  users: [User!]!
+  users(pagination: PaginationInput): UserConnection!
   user(id: ID!): User
-  adminBookings: [Booking!]!
+  adminBookings(pagination: PaginationInput): BookingConnection!
 
   # SUPER ADMIN
-  allBookings: [Booking!]!
+  allBookings(pagination: PaginationInput): BookingConnection!
 
   # AUDIT LOGS
   auditLogs(
@@ -226,26 +318,29 @@ type Query {
   ): AuditLogConnection!
 }
 
-# -------------- MUTATIONS --------------
+# ========================
+# MUTATIONS
+# ========================
 
 type Mutation {
-  # ---------- AUTH ------------
+
+  # AUTH
   register(input: RegisterInput!): AuthPayload!
   login(input: LoginInput!): AuthPayload!
 
-  # -------- CUSTOMER ----------
+  # CUSTOMER
   createBooking(input: CreateBookingInput!): Booking!
   cancelBooking(id: ID!): Booking!
   makePayment(input: MakePaymentInput!): Payment!
   createReview(input: CreateReviewInput!): Review!
 
-  # -------- ADMIN ----------
-
+  # ADMIN
   createRoom(input: CreateRoomInput!): Room!
+  updateRoom(input: UpdateRoomInput!): Room!
   updateRoomStatus(roomId: ID!, status: RoomStatus!): Room!
   confirmBooking(id: ID!): Booking!
 
-  # -------- SUPER ADMIN ----------
+  # SUPER ADMIN
   approveRoom(roomId: ID!): Room!
   rejectRoom(roomId: ID!): Room!
   promoteToAdmin(userId: ID!): User!

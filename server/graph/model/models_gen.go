@@ -10,6 +10,11 @@ import (
 	"time"
 )
 
+type Node interface {
+	IsNode()
+	GetID() string
+}
+
 type AuditLog struct {
 	ID         string    `json:"id"`
 	UserID     string    `json:"userId"`
@@ -23,6 +28,9 @@ type AuditLog struct {
 	Reason     *string   `json:"reason,omitempty"`
 	CreatedAt  time.Time `json:"createdAt"`
 }
+
+func (AuditLog) IsNode()            {}
+func (this AuditLog) GetID() string { return this.ID }
 
 type AuditLogConnection struct {
 	Logs  []*AuditLog `json:"logs"`
@@ -49,21 +57,31 @@ type AuthPayload struct {
 
 type Booking struct {
 	ID            string        `json:"id"`
-	User          string        `json:"user"`
-	RoomID        string        `json:"roomId"`
+	User          *User         `json:"user"`
+	Room          *Room         `json:"room"`
 	CheckInDate   time.Time     `json:"checkInDate"`
 	CheckOutDate  time.Time     `json:"checkOutDate"`
 	Status        BookingStatus `json:"status"`
 	PaymentStatus PaymentStatus `json:"paymentStatus"`
 	TotalPrice    int64         `json:"totalPrice"`
 	Reference     string        `json:"reference"`
-	RoomNumber    string        `json:"roomNumber"`
 	ExpiresAt     time.Time     `json:"expiresAt"`
 	CancelledAt   *time.Time    `json:"cancelledAt,omitempty"`
 	NightCount    int64         `json:"nightCount"`
 	UnitPrice     *int64        `json:"unitPrice,omitempty"`
 	TaxAmount     *int64        `json:"taxAmount,omitempty"`
 	Discount      *int64        `json:"discount,omitempty"`
+	CreatedAt     time.Time     `json:"createdAt"`
+}
+
+func (Booking) IsNode()            {}
+func (this Booking) GetID() string { return this.ID }
+
+type BookingConnection struct {
+	Bookings []*Booking `json:"bookings"`
+	Total    int32      `json:"total"`
+	Page     int32      `json:"page"`
+	Limit    int32      `json:"limit"`
 }
 
 type CreateBookingInput struct {
@@ -92,8 +110,9 @@ type LoginInput struct {
 }
 
 type MakePaymentInput struct {
-	BookingID string `json:"bookingId"`
-	Amount    int64  `json:"amount"`
+	BookingID string          `json:"bookingId"`
+	Amount    int64           `json:"amount"`
+	Provider  PaymentProvider `json:"provider"`
 }
 
 type Mutation struct {
@@ -105,12 +124,17 @@ type PaginationInput struct {
 }
 
 type Payment struct {
-	ID          string        `json:"id"`
-	Booking     *Booking      `json:"booking"`
-	Amount      int64         `json:"amount"`
-	Status      PaymentStatus `json:"status"`
-	PaymentDate time.Time     `json:"paymentDate"`
+	ID                   string          `json:"id"`
+	Booking              *Booking        `json:"booking"`
+	Amount               int64           `json:"amount"`
+	Provider             PaymentProvider `json:"provider"`
+	TransactionReference string          `json:"transactionReference"`
+	Status               PaymentStatus   `json:"status"`
+	PaymentDate          time.Time       `json:"paymentDate"`
 }
+
+func (Payment) IsNode()            {}
+func (this Payment) GetID() string { return this.ID }
 
 type Query struct {
 }
@@ -130,17 +154,27 @@ type Review struct {
 	CreatedAt time.Time `json:"createdAt"`
 }
 
+func (Review) IsNode()            {}
+func (this Review) GetID() string { return this.ID }
+
 type Room struct {
-	ID          string     `json:"id"`
-	Name        string     `json:"name"`
-	Description *string    `json:"description,omitempty"`
-	Price       int64      `json:"price"`
-	Status      RoomStatus `json:"status"`
-	Bookings    []*Booking `json:"bookings,omitempty"`
-	RoomNumber  string     `json:"roomNumber"`
-	Amenities   []string   `json:"amenities,omitempty"`
-	Reviews     []*Review  `json:"reviews,omitempty"`
+	ID          string       `json:"id"`
+	Name        string       `json:"name"`
+	Description *string      `json:"description,omitempty"`
+	Price       int64        `json:"price"`
+	Status      RoomStatus   `json:"status"`
+	RoomNumber  string       `json:"roomNumber"`
+	Amenities   []string     `json:"amenities,omitempty"`
+	Images      []*RoomImage `json:"images,omitempty"`
+	Bookings    []*Booking   `json:"bookings,omitempty"`
+	Reviews     []*Review    `json:"reviews,omitempty"`
+	CreatedAt   time.Time    `json:"createdAt"`
+	UpdatedAt   time.Time    `json:"updatedAt"`
+	DeletedAt   *time.Time   `json:"deletedAt,omitempty"`
 }
+
+func (Room) IsNode()            {}
+func (this Room) GetID() string { return this.ID }
 
 type RoomConnection struct {
 	Rooms []*Room `json:"rooms"`
@@ -149,11 +183,21 @@ type RoomConnection struct {
 	Limit int32   `json:"limit"`
 }
 
+type RoomImage struct {
+	ID        string `json:"id"`
+	RoomID    string `json:"roomId"`
+	URL       string `json:"url"`
+	IsPrimary bool   `json:"isPrimary"`
+}
+
+func (RoomImage) IsNode()            {}
+func (this RoomImage) GetID() string { return this.ID }
+
 type UpdateRoomInput struct {
 	ID          string      `json:"id"`
 	Name        *string     `json:"name,omitempty"`
 	Description *string     `json:"description,omitempty"`
-	Price       int64       `json:"price"`
+	Price       *int64      `json:"price,omitempty"`
 	Status      *RoomStatus `json:"status,omitempty"`
 	RoomNumber  *string     `json:"roomNumber,omitempty"`
 	Amenities   []string    `json:"amenities,omitempty"`
@@ -167,8 +211,19 @@ type User struct {
 	IsActive  bool       `json:"isActive"`
 	CreatedAt time.Time  `json:"createdAt"`
 	UpdatedAt time.Time  `json:"updatedAt"`
+	DeletedAt *time.Time `json:"deletedAt,omitempty"`
 	Reviews   []*Review  `json:"reviews,omitempty"`
 	Bookings  []*Booking `json:"bookings,omitempty"`
+}
+
+func (User) IsNode()            {}
+func (this User) GetID() string { return this.ID }
+
+type UserConnection struct {
+	Users []*User `json:"users"`
+	Total int32   `json:"total"`
+	Page  int32   `json:"page"`
+	Limit int32   `json:"limit"`
 }
 
 type BookingStatus string
@@ -227,6 +282,65 @@ func (e *BookingStatus) UnmarshalJSON(b []byte) error {
 }
 
 func (e BookingStatus) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
+type PaymentProvider string
+
+const (
+	PaymentProviderStripe      PaymentProvider = "STRIPE"
+	PaymentProviderPaystack    PaymentProvider = "PAYSTACK"
+	PaymentProviderFlutterwave PaymentProvider = "FLUTTERWAVE"
+	PaymentProviderPaypal      PaymentProvider = "PAYPAL"
+)
+
+var AllPaymentProvider = []PaymentProvider{
+	PaymentProviderStripe,
+	PaymentProviderPaystack,
+	PaymentProviderFlutterwave,
+	PaymentProviderPaypal,
+}
+
+func (e PaymentProvider) IsValid() bool {
+	switch e {
+	case PaymentProviderStripe, PaymentProviderPaystack, PaymentProviderFlutterwave, PaymentProviderPaypal:
+		return true
+	}
+	return false
+}
+
+func (e PaymentProvider) String() string {
+	return string(e)
+}
+
+func (e *PaymentProvider) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = PaymentProvider(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid PaymentProvider", str)
+	}
+	return nil
+}
+
+func (e PaymentProvider) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *PaymentProvider) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e PaymentProvider) MarshalJSON() ([]byte, error) {
 	var buf bytes.Buffer
 	e.MarshalGQL(&buf)
 	return buf.Bytes(), nil

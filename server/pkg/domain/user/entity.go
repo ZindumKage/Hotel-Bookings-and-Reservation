@@ -15,6 +15,7 @@ var (
 	ErrAccountLocked 	   = errors.New("account is temporarily locked")
 	ErrEmailNotVerified	   = errors.New("email not verified")
 	ErrRateLimited         = errors.New("too many login attempts, try again later")
+	ErrInvalidOrExpiredToken = errors.New("token is expired or invalid")
 )
 
 type User struct {
@@ -31,6 +32,12 @@ type User struct {
 }
 
 type EmailVerification struct {
+	ID uint
+	UserID uint
+	Token string
+	ExpiresAt time.Time
+}
+type PasswordReset struct {
 	ID uint
 	UserID uint
 	Token string

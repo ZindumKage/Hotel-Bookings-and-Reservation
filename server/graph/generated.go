@@ -68,19 +68,26 @@ type ComplexityRoot struct {
 		CancelledAt   func(childComplexity int) int
 		CheckInDate   func(childComplexity int) int
 		CheckOutDate  func(childComplexity int) int
+		CreatedAt     func(childComplexity int) int
 		Discount      func(childComplexity int) int
 		ExpiresAt     func(childComplexity int) int
 		ID            func(childComplexity int) int
 		NightCount    func(childComplexity int) int
 		PaymentStatus func(childComplexity int) int
 		Reference     func(childComplexity int) int
-		RoomID        func(childComplexity int) int
-		RoomNumber    func(childComplexity int) int
+		Room          func(childComplexity int) int
 		Status        func(childComplexity int) int
 		TaxAmount     func(childComplexity int) int
 		TotalPrice    func(childComplexity int) int
 		UnitPrice     func(childComplexity int) int
 		User          func(childComplexity int) int
+	}
+
+	BookingConnection struct {
+		Bookings func(childComplexity int) int
+		Limit    func(childComplexity int) int
+		Page     func(childComplexity int) int
+		Total    func(childComplexity int) int
 	}
 
 	Mutation struct {
@@ -96,28 +103,32 @@ type ComplexityRoot struct {
 		PromoteToAdmin   func(childComplexity int, userID string) int
 		Register         func(childComplexity int, input model.RegisterInput) int
 		RejectRoom       func(childComplexity int, roomID string) int
+		UpdateRoom       func(childComplexity int, input model.UpdateRoomInput) int
 		UpdateRoomStatus func(childComplexity int, roomID string, status model.RoomStatus) int
 	}
 
 	Payment struct {
-		Amount      func(childComplexity int) int
-		Booking     func(childComplexity int) int
-		ID          func(childComplexity int) int
-		PaymentDate func(childComplexity int) int
-		Status      func(childComplexity int) int
+		Amount               func(childComplexity int) int
+		Booking              func(childComplexity int) int
+		ID                   func(childComplexity int) int
+		PaymentDate          func(childComplexity int) int
+		Provider             func(childComplexity int) int
+		Status               func(childComplexity int) int
+		TransactionReference func(childComplexity int) int
 	}
 
 	Query struct {
-		AdminBookings func(childComplexity int) int
-		AllBookings   func(childComplexity int) int
-		AuditLogs     func(childComplexity int, filter *model.AuditLogFilterInput, pagination *model.PaginationInput) int
-		Booking       func(childComplexity int, id string) int
-		Me            func(childComplexity int) int
-		MyBookings    func(childComplexity int) int
-		Room          func(childComplexity int, id string) int
-		Rooms         func(childComplexity int, status *model.RoomStatus, pagination *model.PaginationInput) int
-		User          func(childComplexity int, id string) int
-		Users         func(childComplexity int) int
+		AdminBookings    func(childComplexity int, pagination *model.PaginationInput) int
+		AllBookings      func(childComplexity int, pagination *model.PaginationInput) int
+		AuditLogs        func(childComplexity int, filter *model.AuditLogFilterInput, pagination *model.PaginationInput) int
+		Booking          func(childComplexity int, id string) int
+		Me               func(childComplexity int) int
+		MyBookings       func(childComplexity int, pagination *model.PaginationInput) int
+		Room             func(childComplexity int, id string) int
+		RoomAvailability func(childComplexity int, roomID string, checkInDate time.Time, checkOutDate time.Time) int
+		Rooms            func(childComplexity int, status *model.RoomStatus, pagination *model.PaginationInput) int
+		User             func(childComplexity int, id string) int
+		Users            func(childComplexity int, pagination *model.PaginationInput) int
 	}
 
 	Review struct {
@@ -132,13 +143,17 @@ type ComplexityRoot struct {
 	Room struct {
 		Amenities   func(childComplexity int) int
 		Bookings    func(childComplexity int) int
+		CreatedAt   func(childComplexity int) int
+		DeletedAt   func(childComplexity int) int
 		Description func(childComplexity int) int
 		ID          func(childComplexity int) int
+		Images      func(childComplexity int) int
 		Name        func(childComplexity int) int
 		Price       func(childComplexity int) int
 		Reviews     func(childComplexity int) int
 		RoomNumber  func(childComplexity int) int
 		Status      func(childComplexity int) int
+		UpdatedAt   func(childComplexity int) int
 	}
 
 	RoomConnection struct {
@@ -148,9 +163,17 @@ type ComplexityRoot struct {
 		Total func(childComplexity int) int
 	}
 
+	RoomImage struct {
+		ID        func(childComplexity int) int
+		IsPrimary func(childComplexity int) int
+		RoomID    func(childComplexity int) int
+		URL       func(childComplexity int) int
+	}
+
 	User struct {
 		Bookings  func(childComplexity int) int
 		CreatedAt func(childComplexity int) int
+		DeletedAt func(childComplexity int) int
 		Email     func(childComplexity int) int
 		ID        func(childComplexity int) int
 		IsActive  func(childComplexity int) int
@@ -158,6 +181,13 @@ type ComplexityRoot struct {
 		Reviews   func(childComplexity int) int
 		Role      func(childComplexity int) int
 		UpdatedAt func(childComplexity int) int
+	}
+
+	UserConnection struct {
+		Limit func(childComplexity int) int
+		Page  func(childComplexity int) int
+		Total func(childComplexity int) int
+		Users func(childComplexity int) int
 	}
 }
 
@@ -169,6 +199,7 @@ type MutationResolver interface {
 	MakePayment(ctx context.Context, input model.MakePaymentInput) (*model.Payment, error)
 	CreateReview(ctx context.Context, input model.CreateReviewInput) (*model.Review, error)
 	CreateRoom(ctx context.Context, input model.CreateRoomInput) (*model.Room, error)
+	UpdateRoom(ctx context.Context, input model.UpdateRoomInput) (*model.Room, error)
 	UpdateRoomStatus(ctx context.Context, roomID string, status model.RoomStatus) (*model.Room, error)
 	ConfirmBooking(ctx context.Context, id string) (*model.Booking, error)
 	ApproveRoom(ctx context.Context, roomID string) (*model.Room, error)
@@ -180,12 +211,13 @@ type QueryResolver interface {
 	Me(ctx context.Context) (*model.User, error)
 	Room(ctx context.Context, id string) (*model.Room, error)
 	Rooms(ctx context.Context, status *model.RoomStatus, pagination *model.PaginationInput) (*model.RoomConnection, error)
-	MyBookings(ctx context.Context) ([]*model.Booking, error)
+	RoomAvailability(ctx context.Context, roomID string, checkInDate time.Time, checkOutDate time.Time) (bool, error)
+	MyBookings(ctx context.Context, pagination *model.PaginationInput) (*model.BookingConnection, error)
 	Booking(ctx context.Context, id string) (*model.Booking, error)
-	Users(ctx context.Context) ([]*model.User, error)
+	Users(ctx context.Context, pagination *model.PaginationInput) (*model.UserConnection, error)
 	User(ctx context.Context, id string) (*model.User, error)
-	AdminBookings(ctx context.Context) ([]*model.Booking, error)
-	AllBookings(ctx context.Context) ([]*model.Booking, error)
+	AdminBookings(ctx context.Context, pagination *model.PaginationInput) (*model.BookingConnection, error)
+	AllBookings(ctx context.Context, pagination *model.PaginationInput) (*model.BookingConnection, error)
 	AuditLogs(ctx context.Context, filter *model.AuditLogFilterInput, pagination *model.PaginationInput) (*model.AuditLogConnection, error)
 }
 
@@ -332,6 +364,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Booking.CheckOutDate(childComplexity), true
+	case "Booking.createdAt":
+		if e.ComplexityRoot.Booking.CreatedAt == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Booking.CreatedAt(childComplexity), true
 	case "Booking.discount":
 		if e.ComplexityRoot.Booking.Discount == nil {
 			break
@@ -368,18 +406,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Booking.Reference(childComplexity), true
-	case "Booking.roomId":
-		if e.ComplexityRoot.Booking.RoomID == nil {
+	case "Booking.room":
+		if e.ComplexityRoot.Booking.Room == nil {
 			break
 		}
 
-		return e.ComplexityRoot.Booking.RoomID(childComplexity), true
-	case "Booking.roomNumber":
-		if e.ComplexityRoot.Booking.RoomNumber == nil {
-			break
-		}
-
-		return e.ComplexityRoot.Booking.RoomNumber(childComplexity), true
+		return e.ComplexityRoot.Booking.Room(childComplexity), true
 	case "Booking.status":
 		if e.ComplexityRoot.Booking.Status == nil {
 			break
@@ -410,6 +442,31 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Booking.User(childComplexity), true
+
+	case "BookingConnection.bookings":
+		if e.ComplexityRoot.BookingConnection.Bookings == nil {
+			break
+		}
+
+		return e.ComplexityRoot.BookingConnection.Bookings(childComplexity), true
+	case "BookingConnection.limit":
+		if e.ComplexityRoot.BookingConnection.Limit == nil {
+			break
+		}
+
+		return e.ComplexityRoot.BookingConnection.Limit(childComplexity), true
+	case "BookingConnection.page":
+		if e.ComplexityRoot.BookingConnection.Page == nil {
+			break
+		}
+
+		return e.ComplexityRoot.BookingConnection.Page(childComplexity), true
+	case "BookingConnection.total":
+		if e.ComplexityRoot.BookingConnection.Total == nil {
+			break
+		}
+
+		return e.ComplexityRoot.BookingConnection.Total(childComplexity), true
 
 	case "Mutation.approveRoom":
 		if e.ComplexityRoot.Mutation.ApproveRoom == nil {
@@ -543,6 +600,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Mutation.RejectRoom(childComplexity, args["roomId"].(string)), true
+	case "Mutation.updateRoom":
+		if e.ComplexityRoot.Mutation.UpdateRoom == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_updateRoom_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Mutation.UpdateRoom(childComplexity, args["input"].(model.UpdateRoomInput)), true
 	case "Mutation.updateRoomStatus":
 		if e.ComplexityRoot.Mutation.UpdateRoomStatus == nil {
 			break
@@ -579,25 +647,47 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Payment.PaymentDate(childComplexity), true
+	case "Payment.provider":
+		if e.ComplexityRoot.Payment.Provider == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Payment.Provider(childComplexity), true
 	case "Payment.status":
 		if e.ComplexityRoot.Payment.Status == nil {
 			break
 		}
 
 		return e.ComplexityRoot.Payment.Status(childComplexity), true
+	case "Payment.transactionReference":
+		if e.ComplexityRoot.Payment.TransactionReference == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Payment.TransactionReference(childComplexity), true
 
 	case "Query.adminBookings":
 		if e.ComplexityRoot.Query.AdminBookings == nil {
 			break
 		}
 
-		return e.ComplexityRoot.Query.AdminBookings(childComplexity), true
+		args, err := ec.field_Query_adminBookings_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Query.AdminBookings(childComplexity, args["pagination"].(*model.PaginationInput)), true
 	case "Query.allBookings":
 		if e.ComplexityRoot.Query.AllBookings == nil {
 			break
 		}
 
-		return e.ComplexityRoot.Query.AllBookings(childComplexity), true
+		args, err := ec.field_Query_allBookings_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Query.AllBookings(childComplexity, args["pagination"].(*model.PaginationInput)), true
 	case "Query.auditLogs":
 		if e.ComplexityRoot.Query.AuditLogs == nil {
 			break
@@ -632,7 +722,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			break
 		}
 
-		return e.ComplexityRoot.Query.MyBookings(childComplexity), true
+		args, err := ec.field_Query_myBookings_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Query.MyBookings(childComplexity, args["pagination"].(*model.PaginationInput)), true
 	case "Query.room":
 		if e.ComplexityRoot.Query.Room == nil {
 			break
@@ -644,6 +739,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Query.Room(childComplexity, args["id"].(string)), true
+	case "Query.roomAvailability":
+		if e.ComplexityRoot.Query.RoomAvailability == nil {
+			break
+		}
+
+		args, err := ec.field_Query_roomAvailability_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Query.RoomAvailability(childComplexity, args["roomId"].(string), args["checkInDate"].(time.Time), args["checkOutDate"].(time.Time)), true
 	case "Query.rooms":
 		if e.ComplexityRoot.Query.Rooms == nil {
 			break
@@ -671,7 +777,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			break
 		}
 
-		return e.ComplexityRoot.Query.Users(childComplexity), true
+		args, err := ec.field_Query_users_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Query.Users(childComplexity, args["pagination"].(*model.PaginationInput)), true
 
 	case "Review.comment":
 		if e.ComplexityRoot.Review.Comment == nil {
@@ -722,6 +833,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Room.Bookings(childComplexity), true
+	case "Room.createdAt":
+		if e.ComplexityRoot.Room.CreatedAt == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Room.CreatedAt(childComplexity), true
+	case "Room.deletedAt":
+		if e.ComplexityRoot.Room.DeletedAt == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Room.DeletedAt(childComplexity), true
 	case "Room.description":
 		if e.ComplexityRoot.Room.Description == nil {
 			break
@@ -734,6 +857,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Room.ID(childComplexity), true
+	case "Room.images":
+		if e.ComplexityRoot.Room.Images == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Room.Images(childComplexity), true
 	case "Room.name":
 		if e.ComplexityRoot.Room.Name == nil {
 			break
@@ -764,6 +893,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Room.Status(childComplexity), true
+	case "Room.updatedAt":
+		if e.ComplexityRoot.Room.UpdatedAt == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Room.UpdatedAt(childComplexity), true
 
 	case "RoomConnection.limit":
 		if e.ComplexityRoot.RoomConnection.Limit == nil {
@@ -790,6 +925,31 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.ComplexityRoot.RoomConnection.Total(childComplexity), true
 
+	case "RoomImage.id":
+		if e.ComplexityRoot.RoomImage.ID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.RoomImage.ID(childComplexity), true
+	case "RoomImage.isPrimary":
+		if e.ComplexityRoot.RoomImage.IsPrimary == nil {
+			break
+		}
+
+		return e.ComplexityRoot.RoomImage.IsPrimary(childComplexity), true
+	case "RoomImage.roomId":
+		if e.ComplexityRoot.RoomImage.RoomID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.RoomImage.RoomID(childComplexity), true
+	case "RoomImage.url":
+		if e.ComplexityRoot.RoomImage.URL == nil {
+			break
+		}
+
+		return e.ComplexityRoot.RoomImage.URL(childComplexity), true
+
 	case "User.bookings":
 		if e.ComplexityRoot.User.Bookings == nil {
 			break
@@ -802,6 +962,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.User.CreatedAt(childComplexity), true
+	case "User.deletedAt":
+		if e.ComplexityRoot.User.DeletedAt == nil {
+			break
+		}
+
+		return e.ComplexityRoot.User.DeletedAt(childComplexity), true
 	case "User.email":
 		if e.ComplexityRoot.User.Email == nil {
 			break
@@ -844,6 +1010,31 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.User.UpdatedAt(childComplexity), true
+
+	case "UserConnection.limit":
+		if e.ComplexityRoot.UserConnection.Limit == nil {
+			break
+		}
+
+		return e.ComplexityRoot.UserConnection.Limit(childComplexity), true
+	case "UserConnection.page":
+		if e.ComplexityRoot.UserConnection.Page == nil {
+			break
+		}
+
+		return e.ComplexityRoot.UserConnection.Page(childComplexity), true
+	case "UserConnection.total":
+		if e.ComplexityRoot.UserConnection.Total == nil {
+			break
+		}
+
+		return e.ComplexityRoot.UserConnection.Total(childComplexity), true
+	case "UserConnection.users":
+		if e.ComplexityRoot.UserConnection.Users == nil {
+			break
+		}
+
+		return e.ComplexityRoot.UserConnection.Users(childComplexity), true
 
 	}
 	return 0, false
@@ -1104,6 +1295,17 @@ func (ec *executionContext) field_Mutation_updateRoomStatus_args(ctx context.Con
 	return args, nil
 }
 
+func (ec *executionContext) field_Mutation_updateRoom_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "input", ec.unmarshalNUpdateRoomInput2githubᚗcomᚋOctoetIxᚋHotelᚑBookingsᚑandᚑReservationᚋgraphᚋmodelᚐUpdateRoomInput)
+	if err != nil {
+		return nil, err
+	}
+	args["input"] = arg0
+	return args, nil
+}
+
 func (ec *executionContext) field_Query___type_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -1112,6 +1314,28 @@ func (ec *executionContext) field_Query___type_args(ctx context.Context, rawArgs
 		return nil, err
 	}
 	args["name"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_adminBookings_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "pagination", ec.unmarshalOPaginationInput2ᚖgithubᚗcomᚋOctoetIxᚋHotelᚑBookingsᚑandᚑReservationᚋgraphᚋmodelᚐPaginationInput)
+	if err != nil {
+		return nil, err
+	}
+	args["pagination"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_allBookings_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "pagination", ec.unmarshalOPaginationInput2ᚖgithubᚗcomᚋOctoetIxᚋHotelᚑBookingsᚑandᚑReservationᚋgraphᚋmodelᚐPaginationInput)
+	if err != nil {
+		return nil, err
+	}
+	args["pagination"] = arg0
 	return args, nil
 }
 
@@ -1139,6 +1363,38 @@ func (ec *executionContext) field_Query_booking_args(ctx context.Context, rawArg
 		return nil, err
 	}
 	args["id"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_myBookings_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "pagination", ec.unmarshalOPaginationInput2ᚖgithubᚗcomᚋOctoetIxᚋHotelᚑBookingsᚑandᚑReservationᚋgraphᚋmodelᚐPaginationInput)
+	if err != nil {
+		return nil, err
+	}
+	args["pagination"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_roomAvailability_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "roomId", ec.unmarshalNID2string)
+	if err != nil {
+		return nil, err
+	}
+	args["roomId"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "checkInDate", ec.unmarshalNTime2timeᚐTime)
+	if err != nil {
+		return nil, err
+	}
+	args["checkInDate"] = arg1
+	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "checkOutDate", ec.unmarshalNTime2timeᚐTime)
+	if err != nil {
+		return nil, err
+	}
+	args["checkOutDate"] = arg2
 	return args, nil
 }
 
@@ -1177,6 +1433,17 @@ func (ec *executionContext) field_Query_user_args(ctx context.Context, rawArgs m
 		return nil, err
 	}
 	args["id"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_users_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "pagination", ec.unmarshalOPaginationInput2ᚖgithubᚗcomᚋOctoetIxᚋHotelᚑBookingsᚑandᚑReservationᚋgraphᚋmodelᚐPaginationInput)
+	if err != nil {
+		return nil, err
+	}
+	args["pagination"] = arg0
 	return args, nil
 }
 
@@ -1787,6 +2054,8 @@ func (ec *executionContext) fieldContext_AuthPayload_user(_ context.Context, fie
 				return ec.fieldContext_User_createdAt(ctx, field)
 			case "updatedAt":
 				return ec.fieldContext_User_updatedAt(ctx, field)
+			case "deletedAt":
+				return ec.fieldContext_User_deletedAt(ctx, field)
 			case "reviews":
 				return ec.fieldContext_User_reviews(ctx, field)
 			case "bookings":
@@ -1837,7 +2106,7 @@ func (ec *executionContext) _Booking_user(ctx context.Context, field graphql.Col
 			return obj.User, nil
 		},
 		nil,
-		ec.marshalNID2string,
+		ec.marshalNUser2ᚖgithubᚗcomᚋOctoetIxᚋHotelᚑBookingsᚑandᚑReservationᚋgraphᚋmodelᚐUser,
 		true,
 		true,
 	)
@@ -1850,36 +2119,86 @@ func (ec *executionContext) fieldContext_Booking_user(_ context.Context, field g
 		IsMethod:   false,
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type ID does not have child fields")
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_User_id(ctx, field)
+			case "name":
+				return ec.fieldContext_User_name(ctx, field)
+			case "email":
+				return ec.fieldContext_User_email(ctx, field)
+			case "role":
+				return ec.fieldContext_User_role(ctx, field)
+			case "isActive":
+				return ec.fieldContext_User_isActive(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_User_createdAt(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_User_updatedAt(ctx, field)
+			case "deletedAt":
+				return ec.fieldContext_User_deletedAt(ctx, field)
+			case "reviews":
+				return ec.fieldContext_User_reviews(ctx, field)
+			case "bookings":
+				return ec.fieldContext_User_bookings(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
 		},
 	}
 	return fc, nil
 }
 
-func (ec *executionContext) _Booking_roomId(ctx context.Context, field graphql.CollectedField, obj *model.Booking) (ret graphql.Marshaler) {
+func (ec *executionContext) _Booking_room(ctx context.Context, field graphql.CollectedField, obj *model.Booking) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
 		ec.OperationContext,
 		field,
-		ec.fieldContext_Booking_roomId,
+		ec.fieldContext_Booking_room,
 		func(ctx context.Context) (any, error) {
-			return obj.RoomID, nil
+			return obj.Room, nil
 		},
 		nil,
-		ec.marshalNID2string,
+		ec.marshalNRoom2ᚖgithubᚗcomᚋOctoetIxᚋHotelᚑBookingsᚑandᚑReservationᚋgraphᚋmodelᚐRoom,
 		true,
 		true,
 	)
 }
 
-func (ec *executionContext) fieldContext_Booking_roomId(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Booking_room(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Booking",
 		Field:      field,
 		IsMethod:   false,
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type ID does not have child fields")
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Room_id(ctx, field)
+			case "name":
+				return ec.fieldContext_Room_name(ctx, field)
+			case "description":
+				return ec.fieldContext_Room_description(ctx, field)
+			case "price":
+				return ec.fieldContext_Room_price(ctx, field)
+			case "status":
+				return ec.fieldContext_Room_status(ctx, field)
+			case "roomNumber":
+				return ec.fieldContext_Room_roomNumber(ctx, field)
+			case "amenities":
+				return ec.fieldContext_Room_amenities(ctx, field)
+			case "images":
+				return ec.fieldContext_Room_images(ctx, field)
+			case "bookings":
+				return ec.fieldContext_Room_bookings(ctx, field)
+			case "reviews":
+				return ec.fieldContext_Room_reviews(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_Room_createdAt(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_Room_updatedAt(ctx, field)
+			case "deletedAt":
+				return ec.fieldContext_Room_deletedAt(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Room", field.Name)
 		},
 	}
 	return fc, nil
@@ -2047,35 +2366,6 @@ func (ec *executionContext) _Booking_reference(ctx context.Context, field graphq
 }
 
 func (ec *executionContext) fieldContext_Booking_reference(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Booking",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Booking_roomNumber(ctx context.Context, field graphql.CollectedField, obj *model.Booking) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_Booking_roomNumber,
-		func(ctx context.Context) (any, error) {
-			return obj.RoomNumber, nil
-		},
-		nil,
-		ec.marshalNString2string,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_Booking_roomNumber(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Booking",
 		Field:      field,
@@ -2262,6 +2552,185 @@ func (ec *executionContext) fieldContext_Booking_discount(_ context.Context, fie
 	return fc, nil
 }
 
+func (ec *executionContext) _Booking_createdAt(ctx context.Context, field graphql.CollectedField, obj *model.Booking) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Booking_createdAt,
+		func(ctx context.Context) (any, error) {
+			return obj.CreatedAt, nil
+		},
+		nil,
+		ec.marshalNTime2timeᚐTime,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Booking_createdAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Booking",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Time does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _BookingConnection_bookings(ctx context.Context, field graphql.CollectedField, obj *model.BookingConnection) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_BookingConnection_bookings,
+		func(ctx context.Context) (any, error) {
+			return obj.Bookings, nil
+		},
+		nil,
+		ec.marshalNBooking2ᚕᚖgithubᚗcomᚋOctoetIxᚋHotelᚑBookingsᚑandᚑReservationᚋgraphᚋmodelᚐBookingᚄ,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_BookingConnection_bookings(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "BookingConnection",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Booking_id(ctx, field)
+			case "user":
+				return ec.fieldContext_Booking_user(ctx, field)
+			case "room":
+				return ec.fieldContext_Booking_room(ctx, field)
+			case "checkInDate":
+				return ec.fieldContext_Booking_checkInDate(ctx, field)
+			case "checkOutDate":
+				return ec.fieldContext_Booking_checkOutDate(ctx, field)
+			case "status":
+				return ec.fieldContext_Booking_status(ctx, field)
+			case "paymentStatus":
+				return ec.fieldContext_Booking_paymentStatus(ctx, field)
+			case "totalPrice":
+				return ec.fieldContext_Booking_totalPrice(ctx, field)
+			case "reference":
+				return ec.fieldContext_Booking_reference(ctx, field)
+			case "expiresAt":
+				return ec.fieldContext_Booking_expiresAt(ctx, field)
+			case "cancelledAt":
+				return ec.fieldContext_Booking_cancelledAt(ctx, field)
+			case "nightCount":
+				return ec.fieldContext_Booking_nightCount(ctx, field)
+			case "unitPrice":
+				return ec.fieldContext_Booking_unitPrice(ctx, field)
+			case "taxAmount":
+				return ec.fieldContext_Booking_taxAmount(ctx, field)
+			case "discount":
+				return ec.fieldContext_Booking_discount(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_Booking_createdAt(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Booking", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _BookingConnection_total(ctx context.Context, field graphql.CollectedField, obj *model.BookingConnection) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_BookingConnection_total,
+		func(ctx context.Context) (any, error) {
+			return obj.Total, nil
+		},
+		nil,
+		ec.marshalNInt2int32,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_BookingConnection_total(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "BookingConnection",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _BookingConnection_page(ctx context.Context, field graphql.CollectedField, obj *model.BookingConnection) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_BookingConnection_page,
+		func(ctx context.Context) (any, error) {
+			return obj.Page, nil
+		},
+		nil,
+		ec.marshalNInt2int32,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_BookingConnection_page(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "BookingConnection",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _BookingConnection_limit(ctx context.Context, field graphql.CollectedField, obj *model.BookingConnection) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_BookingConnection_limit,
+		func(ctx context.Context) (any, error) {
+			return obj.Limit, nil
+		},
+		nil,
+		ec.marshalNInt2int32,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_BookingConnection_limit(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "BookingConnection",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Mutation_register(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -2389,8 +2858,8 @@ func (ec *executionContext) fieldContext_Mutation_createBooking(ctx context.Cont
 				return ec.fieldContext_Booking_id(ctx, field)
 			case "user":
 				return ec.fieldContext_Booking_user(ctx, field)
-			case "roomId":
-				return ec.fieldContext_Booking_roomId(ctx, field)
+			case "room":
+				return ec.fieldContext_Booking_room(ctx, field)
 			case "checkInDate":
 				return ec.fieldContext_Booking_checkInDate(ctx, field)
 			case "checkOutDate":
@@ -2403,8 +2872,6 @@ func (ec *executionContext) fieldContext_Mutation_createBooking(ctx context.Cont
 				return ec.fieldContext_Booking_totalPrice(ctx, field)
 			case "reference":
 				return ec.fieldContext_Booking_reference(ctx, field)
-			case "roomNumber":
-				return ec.fieldContext_Booking_roomNumber(ctx, field)
 			case "expiresAt":
 				return ec.fieldContext_Booking_expiresAt(ctx, field)
 			case "cancelledAt":
@@ -2417,6 +2884,8 @@ func (ec *executionContext) fieldContext_Mutation_createBooking(ctx context.Cont
 				return ec.fieldContext_Booking_taxAmount(ctx, field)
 			case "discount":
 				return ec.fieldContext_Booking_discount(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_Booking_createdAt(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Booking", field.Name)
 		},
@@ -2464,8 +2933,8 @@ func (ec *executionContext) fieldContext_Mutation_cancelBooking(ctx context.Cont
 				return ec.fieldContext_Booking_id(ctx, field)
 			case "user":
 				return ec.fieldContext_Booking_user(ctx, field)
-			case "roomId":
-				return ec.fieldContext_Booking_roomId(ctx, field)
+			case "room":
+				return ec.fieldContext_Booking_room(ctx, field)
 			case "checkInDate":
 				return ec.fieldContext_Booking_checkInDate(ctx, field)
 			case "checkOutDate":
@@ -2478,8 +2947,6 @@ func (ec *executionContext) fieldContext_Mutation_cancelBooking(ctx context.Cont
 				return ec.fieldContext_Booking_totalPrice(ctx, field)
 			case "reference":
 				return ec.fieldContext_Booking_reference(ctx, field)
-			case "roomNumber":
-				return ec.fieldContext_Booking_roomNumber(ctx, field)
 			case "expiresAt":
 				return ec.fieldContext_Booking_expiresAt(ctx, field)
 			case "cancelledAt":
@@ -2492,6 +2959,8 @@ func (ec *executionContext) fieldContext_Mutation_cancelBooking(ctx context.Cont
 				return ec.fieldContext_Booking_taxAmount(ctx, field)
 			case "discount":
 				return ec.fieldContext_Booking_discount(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_Booking_createdAt(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Booking", field.Name)
 		},
@@ -2541,6 +3010,10 @@ func (ec *executionContext) fieldContext_Mutation_makePayment(ctx context.Contex
 				return ec.fieldContext_Payment_booking(ctx, field)
 			case "amount":
 				return ec.fieldContext_Payment_amount(ctx, field)
+			case "provider":
+				return ec.fieldContext_Payment_provider(ctx, field)
+			case "transactionReference":
+				return ec.fieldContext_Payment_transactionReference(ctx, field)
 			case "status":
 				return ec.fieldContext_Payment_status(ctx, field)
 			case "paymentDate":
@@ -2653,14 +3126,22 @@ func (ec *executionContext) fieldContext_Mutation_createRoom(ctx context.Context
 				return ec.fieldContext_Room_price(ctx, field)
 			case "status":
 				return ec.fieldContext_Room_status(ctx, field)
-			case "bookings":
-				return ec.fieldContext_Room_bookings(ctx, field)
 			case "roomNumber":
 				return ec.fieldContext_Room_roomNumber(ctx, field)
 			case "amenities":
 				return ec.fieldContext_Room_amenities(ctx, field)
+			case "images":
+				return ec.fieldContext_Room_images(ctx, field)
+			case "bookings":
+				return ec.fieldContext_Room_bookings(ctx, field)
 			case "reviews":
 				return ec.fieldContext_Room_reviews(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_Room_createdAt(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_Room_updatedAt(ctx, field)
+			case "deletedAt":
+				return ec.fieldContext_Room_deletedAt(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Room", field.Name)
 		},
@@ -2673,6 +3154,75 @@ func (ec *executionContext) fieldContext_Mutation_createRoom(ctx context.Context
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Mutation_createRoom_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_updateRoom(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Mutation_updateRoom,
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Mutation().UpdateRoom(ctx, fc.Args["input"].(model.UpdateRoomInput))
+		},
+		nil,
+		ec.marshalNRoom2ᚖgithubᚗcomᚋOctoetIxᚋHotelᚑBookingsᚑandᚑReservationᚋgraphᚋmodelᚐRoom,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Mutation_updateRoom(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Room_id(ctx, field)
+			case "name":
+				return ec.fieldContext_Room_name(ctx, field)
+			case "description":
+				return ec.fieldContext_Room_description(ctx, field)
+			case "price":
+				return ec.fieldContext_Room_price(ctx, field)
+			case "status":
+				return ec.fieldContext_Room_status(ctx, field)
+			case "roomNumber":
+				return ec.fieldContext_Room_roomNumber(ctx, field)
+			case "amenities":
+				return ec.fieldContext_Room_amenities(ctx, field)
+			case "images":
+				return ec.fieldContext_Room_images(ctx, field)
+			case "bookings":
+				return ec.fieldContext_Room_bookings(ctx, field)
+			case "reviews":
+				return ec.fieldContext_Room_reviews(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_Room_createdAt(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_Room_updatedAt(ctx, field)
+			case "deletedAt":
+				return ec.fieldContext_Room_deletedAt(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Room", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_updateRoom_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -2714,14 +3264,22 @@ func (ec *executionContext) fieldContext_Mutation_updateRoomStatus(ctx context.C
 				return ec.fieldContext_Room_price(ctx, field)
 			case "status":
 				return ec.fieldContext_Room_status(ctx, field)
-			case "bookings":
-				return ec.fieldContext_Room_bookings(ctx, field)
 			case "roomNumber":
 				return ec.fieldContext_Room_roomNumber(ctx, field)
 			case "amenities":
 				return ec.fieldContext_Room_amenities(ctx, field)
+			case "images":
+				return ec.fieldContext_Room_images(ctx, field)
+			case "bookings":
+				return ec.fieldContext_Room_bookings(ctx, field)
 			case "reviews":
 				return ec.fieldContext_Room_reviews(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_Room_createdAt(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_Room_updatedAt(ctx, field)
+			case "deletedAt":
+				return ec.fieldContext_Room_deletedAt(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Room", field.Name)
 		},
@@ -2769,8 +3327,8 @@ func (ec *executionContext) fieldContext_Mutation_confirmBooking(ctx context.Con
 				return ec.fieldContext_Booking_id(ctx, field)
 			case "user":
 				return ec.fieldContext_Booking_user(ctx, field)
-			case "roomId":
-				return ec.fieldContext_Booking_roomId(ctx, field)
+			case "room":
+				return ec.fieldContext_Booking_room(ctx, field)
 			case "checkInDate":
 				return ec.fieldContext_Booking_checkInDate(ctx, field)
 			case "checkOutDate":
@@ -2783,8 +3341,6 @@ func (ec *executionContext) fieldContext_Mutation_confirmBooking(ctx context.Con
 				return ec.fieldContext_Booking_totalPrice(ctx, field)
 			case "reference":
 				return ec.fieldContext_Booking_reference(ctx, field)
-			case "roomNumber":
-				return ec.fieldContext_Booking_roomNumber(ctx, field)
 			case "expiresAt":
 				return ec.fieldContext_Booking_expiresAt(ctx, field)
 			case "cancelledAt":
@@ -2797,6 +3353,8 @@ func (ec *executionContext) fieldContext_Mutation_confirmBooking(ctx context.Con
 				return ec.fieldContext_Booking_taxAmount(ctx, field)
 			case "discount":
 				return ec.fieldContext_Booking_discount(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_Booking_createdAt(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Booking", field.Name)
 		},
@@ -2850,14 +3408,22 @@ func (ec *executionContext) fieldContext_Mutation_approveRoom(ctx context.Contex
 				return ec.fieldContext_Room_price(ctx, field)
 			case "status":
 				return ec.fieldContext_Room_status(ctx, field)
-			case "bookings":
-				return ec.fieldContext_Room_bookings(ctx, field)
 			case "roomNumber":
 				return ec.fieldContext_Room_roomNumber(ctx, field)
 			case "amenities":
 				return ec.fieldContext_Room_amenities(ctx, field)
+			case "images":
+				return ec.fieldContext_Room_images(ctx, field)
+			case "bookings":
+				return ec.fieldContext_Room_bookings(ctx, field)
 			case "reviews":
 				return ec.fieldContext_Room_reviews(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_Room_createdAt(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_Room_updatedAt(ctx, field)
+			case "deletedAt":
+				return ec.fieldContext_Room_deletedAt(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Room", field.Name)
 		},
@@ -2911,14 +3477,22 @@ func (ec *executionContext) fieldContext_Mutation_rejectRoom(ctx context.Context
 				return ec.fieldContext_Room_price(ctx, field)
 			case "status":
 				return ec.fieldContext_Room_status(ctx, field)
-			case "bookings":
-				return ec.fieldContext_Room_bookings(ctx, field)
 			case "roomNumber":
 				return ec.fieldContext_Room_roomNumber(ctx, field)
 			case "amenities":
 				return ec.fieldContext_Room_amenities(ctx, field)
+			case "images":
+				return ec.fieldContext_Room_images(ctx, field)
+			case "bookings":
+				return ec.fieldContext_Room_bookings(ctx, field)
 			case "reviews":
 				return ec.fieldContext_Room_reviews(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_Room_createdAt(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_Room_updatedAt(ctx, field)
+			case "deletedAt":
+				return ec.fieldContext_Room_deletedAt(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Room", field.Name)
 		},
@@ -2976,6 +3550,8 @@ func (ec *executionContext) fieldContext_Mutation_promoteToAdmin(ctx context.Con
 				return ec.fieldContext_User_createdAt(ctx, field)
 			case "updatedAt":
 				return ec.fieldContext_User_updatedAt(ctx, field)
+			case "deletedAt":
+				return ec.fieldContext_User_deletedAt(ctx, field)
 			case "reviews":
 				return ec.fieldContext_User_reviews(ctx, field)
 			case "bookings":
@@ -3037,6 +3613,8 @@ func (ec *executionContext) fieldContext_Mutation_deactivateUser(ctx context.Con
 				return ec.fieldContext_User_createdAt(ctx, field)
 			case "updatedAt":
 				return ec.fieldContext_User_updatedAt(ctx, field)
+			case "deletedAt":
+				return ec.fieldContext_User_deletedAt(ctx, field)
 			case "reviews":
 				return ec.fieldContext_User_reviews(ctx, field)
 			case "bookings":
@@ -3116,8 +3694,8 @@ func (ec *executionContext) fieldContext_Payment_booking(_ context.Context, fiel
 				return ec.fieldContext_Booking_id(ctx, field)
 			case "user":
 				return ec.fieldContext_Booking_user(ctx, field)
-			case "roomId":
-				return ec.fieldContext_Booking_roomId(ctx, field)
+			case "room":
+				return ec.fieldContext_Booking_room(ctx, field)
 			case "checkInDate":
 				return ec.fieldContext_Booking_checkInDate(ctx, field)
 			case "checkOutDate":
@@ -3130,8 +3708,6 @@ func (ec *executionContext) fieldContext_Payment_booking(_ context.Context, fiel
 				return ec.fieldContext_Booking_totalPrice(ctx, field)
 			case "reference":
 				return ec.fieldContext_Booking_reference(ctx, field)
-			case "roomNumber":
-				return ec.fieldContext_Booking_roomNumber(ctx, field)
 			case "expiresAt":
 				return ec.fieldContext_Booking_expiresAt(ctx, field)
 			case "cancelledAt":
@@ -3144,6 +3720,8 @@ func (ec *executionContext) fieldContext_Payment_booking(_ context.Context, fiel
 				return ec.fieldContext_Booking_taxAmount(ctx, field)
 			case "discount":
 				return ec.fieldContext_Booking_discount(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_Booking_createdAt(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Booking", field.Name)
 		},
@@ -3175,6 +3753,64 @@ func (ec *executionContext) fieldContext_Payment_amount(_ context.Context, field
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type Int64 does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Payment_provider(ctx context.Context, field graphql.CollectedField, obj *model.Payment) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Payment_provider,
+		func(ctx context.Context) (any, error) {
+			return obj.Provider, nil
+		},
+		nil,
+		ec.marshalNPaymentProvider2githubᚗcomᚋOctoetIxᚋHotelᚑBookingsᚑandᚑReservationᚋgraphᚋmodelᚐPaymentProvider,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Payment_provider(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Payment",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type PaymentProvider does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Payment_transactionReference(ctx context.Context, field graphql.CollectedField, obj *model.Payment) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Payment_transactionReference,
+		func(ctx context.Context) (any, error) {
+			return obj.TransactionReference, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Payment_transactionReference(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Payment",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
 		},
 	}
 	return fc, nil
@@ -3276,6 +3912,8 @@ func (ec *executionContext) fieldContext_Query_me(_ context.Context, field graph
 				return ec.fieldContext_User_createdAt(ctx, field)
 			case "updatedAt":
 				return ec.fieldContext_User_updatedAt(ctx, field)
+			case "deletedAt":
+				return ec.fieldContext_User_deletedAt(ctx, field)
 			case "reviews":
 				return ec.fieldContext_User_reviews(ctx, field)
 			case "bookings":
@@ -3322,14 +3960,22 @@ func (ec *executionContext) fieldContext_Query_room(ctx context.Context, field g
 				return ec.fieldContext_Room_price(ctx, field)
 			case "status":
 				return ec.fieldContext_Room_status(ctx, field)
-			case "bookings":
-				return ec.fieldContext_Room_bookings(ctx, field)
 			case "roomNumber":
 				return ec.fieldContext_Room_roomNumber(ctx, field)
 			case "amenities":
 				return ec.fieldContext_Room_amenities(ctx, field)
+			case "images":
+				return ec.fieldContext_Room_images(ctx, field)
+			case "bookings":
+				return ec.fieldContext_Room_bookings(ctx, field)
 			case "reviews":
 				return ec.fieldContext_Room_reviews(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_Room_createdAt(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_Room_updatedAt(ctx, field)
+			case "deletedAt":
+				return ec.fieldContext_Room_deletedAt(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Room", field.Name)
 		},
@@ -3399,6 +4045,47 @@ func (ec *executionContext) fieldContext_Query_rooms(ctx context.Context, field 
 	return fc, nil
 }
 
+func (ec *executionContext) _Query_roomAvailability(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Query_roomAvailability,
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Query().RoomAvailability(ctx, fc.Args["roomId"].(string), fc.Args["checkInDate"].(time.Time), fc.Args["checkOutDate"].(time.Time))
+		},
+		nil,
+		ec.marshalNBoolean2bool,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Query_roomAvailability(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_roomAvailability_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Query_myBookings(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -3406,16 +4093,17 @@ func (ec *executionContext) _Query_myBookings(ctx context.Context, field graphql
 		field,
 		ec.fieldContext_Query_myBookings,
 		func(ctx context.Context) (any, error) {
-			return ec.Resolvers.Query().MyBookings(ctx)
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Query().MyBookings(ctx, fc.Args["pagination"].(*model.PaginationInput))
 		},
 		nil,
-		ec.marshalNBooking2ᚕᚖgithubᚗcomᚋOctoetIxᚋHotelᚑBookingsᚑandᚑReservationᚋgraphᚋmodelᚐBookingᚄ,
+		ec.marshalNBookingConnection2ᚖgithubᚗcomᚋOctoetIxᚋHotelᚑBookingsᚑandᚑReservationᚋgraphᚋmodelᚐBookingConnection,
 		true,
 		true,
 	)
 }
 
-func (ec *executionContext) fieldContext_Query_myBookings(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Query_myBookings(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Query",
 		Field:      field,
@@ -3423,41 +4111,28 @@ func (ec *executionContext) fieldContext_Query_myBookings(_ context.Context, fie
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
-			case "id":
-				return ec.fieldContext_Booking_id(ctx, field)
-			case "user":
-				return ec.fieldContext_Booking_user(ctx, field)
-			case "roomId":
-				return ec.fieldContext_Booking_roomId(ctx, field)
-			case "checkInDate":
-				return ec.fieldContext_Booking_checkInDate(ctx, field)
-			case "checkOutDate":
-				return ec.fieldContext_Booking_checkOutDate(ctx, field)
-			case "status":
-				return ec.fieldContext_Booking_status(ctx, field)
-			case "paymentStatus":
-				return ec.fieldContext_Booking_paymentStatus(ctx, field)
-			case "totalPrice":
-				return ec.fieldContext_Booking_totalPrice(ctx, field)
-			case "reference":
-				return ec.fieldContext_Booking_reference(ctx, field)
-			case "roomNumber":
-				return ec.fieldContext_Booking_roomNumber(ctx, field)
-			case "expiresAt":
-				return ec.fieldContext_Booking_expiresAt(ctx, field)
-			case "cancelledAt":
-				return ec.fieldContext_Booking_cancelledAt(ctx, field)
-			case "nightCount":
-				return ec.fieldContext_Booking_nightCount(ctx, field)
-			case "unitPrice":
-				return ec.fieldContext_Booking_unitPrice(ctx, field)
-			case "taxAmount":
-				return ec.fieldContext_Booking_taxAmount(ctx, field)
-			case "discount":
-				return ec.fieldContext_Booking_discount(ctx, field)
+			case "bookings":
+				return ec.fieldContext_BookingConnection_bookings(ctx, field)
+			case "total":
+				return ec.fieldContext_BookingConnection_total(ctx, field)
+			case "page":
+				return ec.fieldContext_BookingConnection_page(ctx, field)
+			case "limit":
+				return ec.fieldContext_BookingConnection_limit(ctx, field)
 			}
-			return nil, fmt.Errorf("no field named %q was found under type Booking", field.Name)
+			return nil, fmt.Errorf("no field named %q was found under type BookingConnection", field.Name)
 		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_myBookings_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
 	}
 	return fc, nil
 }
@@ -3491,8 +4166,8 @@ func (ec *executionContext) fieldContext_Query_booking(ctx context.Context, fiel
 				return ec.fieldContext_Booking_id(ctx, field)
 			case "user":
 				return ec.fieldContext_Booking_user(ctx, field)
-			case "roomId":
-				return ec.fieldContext_Booking_roomId(ctx, field)
+			case "room":
+				return ec.fieldContext_Booking_room(ctx, field)
 			case "checkInDate":
 				return ec.fieldContext_Booking_checkInDate(ctx, field)
 			case "checkOutDate":
@@ -3505,8 +4180,6 @@ func (ec *executionContext) fieldContext_Query_booking(ctx context.Context, fiel
 				return ec.fieldContext_Booking_totalPrice(ctx, field)
 			case "reference":
 				return ec.fieldContext_Booking_reference(ctx, field)
-			case "roomNumber":
-				return ec.fieldContext_Booking_roomNumber(ctx, field)
 			case "expiresAt":
 				return ec.fieldContext_Booking_expiresAt(ctx, field)
 			case "cancelledAt":
@@ -3519,6 +4192,8 @@ func (ec *executionContext) fieldContext_Query_booking(ctx context.Context, fiel
 				return ec.fieldContext_Booking_taxAmount(ctx, field)
 			case "discount":
 				return ec.fieldContext_Booking_discount(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_Booking_createdAt(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Booking", field.Name)
 		},
@@ -3544,16 +4219,17 @@ func (ec *executionContext) _Query_users(ctx context.Context, field graphql.Coll
 		field,
 		ec.fieldContext_Query_users,
 		func(ctx context.Context) (any, error) {
-			return ec.Resolvers.Query().Users(ctx)
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Query().Users(ctx, fc.Args["pagination"].(*model.PaginationInput))
 		},
 		nil,
-		ec.marshalNUser2ᚕᚖgithubᚗcomᚋOctoetIxᚋHotelᚑBookingsᚑandᚑReservationᚋgraphᚋmodelᚐUserᚄ,
+		ec.marshalNUserConnection2ᚖgithubᚗcomᚋOctoetIxᚋHotelᚑBookingsᚑandᚑReservationᚋgraphᚋmodelᚐUserConnection,
 		true,
 		true,
 	)
 }
 
-func (ec *executionContext) fieldContext_Query_users(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Query_users(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Query",
 		Field:      field,
@@ -3561,27 +4237,28 @@ func (ec *executionContext) fieldContext_Query_users(_ context.Context, field gr
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
-			case "id":
-				return ec.fieldContext_User_id(ctx, field)
-			case "name":
-				return ec.fieldContext_User_name(ctx, field)
-			case "email":
-				return ec.fieldContext_User_email(ctx, field)
-			case "role":
-				return ec.fieldContext_User_role(ctx, field)
-			case "isActive":
-				return ec.fieldContext_User_isActive(ctx, field)
-			case "createdAt":
-				return ec.fieldContext_User_createdAt(ctx, field)
-			case "updatedAt":
-				return ec.fieldContext_User_updatedAt(ctx, field)
-			case "reviews":
-				return ec.fieldContext_User_reviews(ctx, field)
-			case "bookings":
-				return ec.fieldContext_User_bookings(ctx, field)
+			case "users":
+				return ec.fieldContext_UserConnection_users(ctx, field)
+			case "total":
+				return ec.fieldContext_UserConnection_total(ctx, field)
+			case "page":
+				return ec.fieldContext_UserConnection_page(ctx, field)
+			case "limit":
+				return ec.fieldContext_UserConnection_limit(ctx, field)
 			}
-			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
+			return nil, fmt.Errorf("no field named %q was found under type UserConnection", field.Name)
 		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_users_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
 	}
 	return fc, nil
 }
@@ -3625,6 +4302,8 @@ func (ec *executionContext) fieldContext_Query_user(ctx context.Context, field g
 				return ec.fieldContext_User_createdAt(ctx, field)
 			case "updatedAt":
 				return ec.fieldContext_User_updatedAt(ctx, field)
+			case "deletedAt":
+				return ec.fieldContext_User_deletedAt(ctx, field)
 			case "reviews":
 				return ec.fieldContext_User_reviews(ctx, field)
 			case "bookings":
@@ -3654,16 +4333,17 @@ func (ec *executionContext) _Query_adminBookings(ctx context.Context, field grap
 		field,
 		ec.fieldContext_Query_adminBookings,
 		func(ctx context.Context) (any, error) {
-			return ec.Resolvers.Query().AdminBookings(ctx)
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Query().AdminBookings(ctx, fc.Args["pagination"].(*model.PaginationInput))
 		},
 		nil,
-		ec.marshalNBooking2ᚕᚖgithubᚗcomᚋOctoetIxᚋHotelᚑBookingsᚑandᚑReservationᚋgraphᚋmodelᚐBookingᚄ,
+		ec.marshalNBookingConnection2ᚖgithubᚗcomᚋOctoetIxᚋHotelᚑBookingsᚑandᚑReservationᚋgraphᚋmodelᚐBookingConnection,
 		true,
 		true,
 	)
 }
 
-func (ec *executionContext) fieldContext_Query_adminBookings(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Query_adminBookings(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Query",
 		Field:      field,
@@ -3671,41 +4351,28 @@ func (ec *executionContext) fieldContext_Query_adminBookings(_ context.Context, 
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
-			case "id":
-				return ec.fieldContext_Booking_id(ctx, field)
-			case "user":
-				return ec.fieldContext_Booking_user(ctx, field)
-			case "roomId":
-				return ec.fieldContext_Booking_roomId(ctx, field)
-			case "checkInDate":
-				return ec.fieldContext_Booking_checkInDate(ctx, field)
-			case "checkOutDate":
-				return ec.fieldContext_Booking_checkOutDate(ctx, field)
-			case "status":
-				return ec.fieldContext_Booking_status(ctx, field)
-			case "paymentStatus":
-				return ec.fieldContext_Booking_paymentStatus(ctx, field)
-			case "totalPrice":
-				return ec.fieldContext_Booking_totalPrice(ctx, field)
-			case "reference":
-				return ec.fieldContext_Booking_reference(ctx, field)
-			case "roomNumber":
-				return ec.fieldContext_Booking_roomNumber(ctx, field)
-			case "expiresAt":
-				return ec.fieldContext_Booking_expiresAt(ctx, field)
-			case "cancelledAt":
-				return ec.fieldContext_Booking_cancelledAt(ctx, field)
-			case "nightCount":
-				return ec.fieldContext_Booking_nightCount(ctx, field)
-			case "unitPrice":
-				return ec.fieldContext_Booking_unitPrice(ctx, field)
-			case "taxAmount":
-				return ec.fieldContext_Booking_taxAmount(ctx, field)
-			case "discount":
-				return ec.fieldContext_Booking_discount(ctx, field)
+			case "bookings":
+				return ec.fieldContext_BookingConnection_bookings(ctx, field)
+			case "total":
+				return ec.fieldContext_BookingConnection_total(ctx, field)
+			case "page":
+				return ec.fieldContext_BookingConnection_page(ctx, field)
+			case "limit":
+				return ec.fieldContext_BookingConnection_limit(ctx, field)
 			}
-			return nil, fmt.Errorf("no field named %q was found under type Booking", field.Name)
+			return nil, fmt.Errorf("no field named %q was found under type BookingConnection", field.Name)
 		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_adminBookings_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
 	}
 	return fc, nil
 }
@@ -3717,16 +4384,17 @@ func (ec *executionContext) _Query_allBookings(ctx context.Context, field graphq
 		field,
 		ec.fieldContext_Query_allBookings,
 		func(ctx context.Context) (any, error) {
-			return ec.Resolvers.Query().AllBookings(ctx)
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Query().AllBookings(ctx, fc.Args["pagination"].(*model.PaginationInput))
 		},
 		nil,
-		ec.marshalNBooking2ᚕᚖgithubᚗcomᚋOctoetIxᚋHotelᚑBookingsᚑandᚑReservationᚋgraphᚋmodelᚐBookingᚄ,
+		ec.marshalNBookingConnection2ᚖgithubᚗcomᚋOctoetIxᚋHotelᚑBookingsᚑandᚑReservationᚋgraphᚋmodelᚐBookingConnection,
 		true,
 		true,
 	)
 }
 
-func (ec *executionContext) fieldContext_Query_allBookings(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Query_allBookings(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Query",
 		Field:      field,
@@ -3734,41 +4402,28 @@ func (ec *executionContext) fieldContext_Query_allBookings(_ context.Context, fi
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
-			case "id":
-				return ec.fieldContext_Booking_id(ctx, field)
-			case "user":
-				return ec.fieldContext_Booking_user(ctx, field)
-			case "roomId":
-				return ec.fieldContext_Booking_roomId(ctx, field)
-			case "checkInDate":
-				return ec.fieldContext_Booking_checkInDate(ctx, field)
-			case "checkOutDate":
-				return ec.fieldContext_Booking_checkOutDate(ctx, field)
-			case "status":
-				return ec.fieldContext_Booking_status(ctx, field)
-			case "paymentStatus":
-				return ec.fieldContext_Booking_paymentStatus(ctx, field)
-			case "totalPrice":
-				return ec.fieldContext_Booking_totalPrice(ctx, field)
-			case "reference":
-				return ec.fieldContext_Booking_reference(ctx, field)
-			case "roomNumber":
-				return ec.fieldContext_Booking_roomNumber(ctx, field)
-			case "expiresAt":
-				return ec.fieldContext_Booking_expiresAt(ctx, field)
-			case "cancelledAt":
-				return ec.fieldContext_Booking_cancelledAt(ctx, field)
-			case "nightCount":
-				return ec.fieldContext_Booking_nightCount(ctx, field)
-			case "unitPrice":
-				return ec.fieldContext_Booking_unitPrice(ctx, field)
-			case "taxAmount":
-				return ec.fieldContext_Booking_taxAmount(ctx, field)
-			case "discount":
-				return ec.fieldContext_Booking_discount(ctx, field)
+			case "bookings":
+				return ec.fieldContext_BookingConnection_bookings(ctx, field)
+			case "total":
+				return ec.fieldContext_BookingConnection_total(ctx, field)
+			case "page":
+				return ec.fieldContext_BookingConnection_page(ctx, field)
+			case "limit":
+				return ec.fieldContext_BookingConnection_limit(ctx, field)
 			}
-			return nil, fmt.Errorf("no field named %q was found under type Booking", field.Name)
+			return nil, fmt.Errorf("no field named %q was found under type BookingConnection", field.Name)
 		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_allBookings_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
 	}
 	return fc, nil
 }
@@ -3999,6 +4654,8 @@ func (ec *executionContext) fieldContext_Review_user(_ context.Context, field gr
 				return ec.fieldContext_User_createdAt(ctx, field)
 			case "updatedAt":
 				return ec.fieldContext_User_updatedAt(ctx, field)
+			case "deletedAt":
+				return ec.fieldContext_User_deletedAt(ctx, field)
 			case "reviews":
 				return ec.fieldContext_User_reviews(ctx, field)
 			case "bookings":
@@ -4044,14 +4701,22 @@ func (ec *executionContext) fieldContext_Review_room(_ context.Context, field gr
 				return ec.fieldContext_Room_price(ctx, field)
 			case "status":
 				return ec.fieldContext_Room_status(ctx, field)
-			case "bookings":
-				return ec.fieldContext_Room_bookings(ctx, field)
 			case "roomNumber":
 				return ec.fieldContext_Room_roomNumber(ctx, field)
 			case "amenities":
 				return ec.fieldContext_Room_amenities(ctx, field)
+			case "images":
+				return ec.fieldContext_Room_images(ctx, field)
+			case "bookings":
+				return ec.fieldContext_Room_bookings(ctx, field)
 			case "reviews":
 				return ec.fieldContext_Room_reviews(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_Room_createdAt(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_Room_updatedAt(ctx, field)
+			case "deletedAt":
+				return ec.fieldContext_Room_deletedAt(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Room", field.Name)
 		},
@@ -4291,69 +4956,6 @@ func (ec *executionContext) fieldContext_Room_status(_ context.Context, field gr
 	return fc, nil
 }
 
-func (ec *executionContext) _Room_bookings(ctx context.Context, field graphql.CollectedField, obj *model.Room) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_Room_bookings,
-		func(ctx context.Context) (any, error) {
-			return obj.Bookings, nil
-		},
-		nil,
-		ec.marshalOBooking2ᚕᚖgithubᚗcomᚋOctoetIxᚋHotelᚑBookingsᚑandᚑReservationᚋgraphᚋmodelᚐBookingᚄ,
-		true,
-		false,
-	)
-}
-
-func (ec *executionContext) fieldContext_Room_bookings(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Room",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_Booking_id(ctx, field)
-			case "user":
-				return ec.fieldContext_Booking_user(ctx, field)
-			case "roomId":
-				return ec.fieldContext_Booking_roomId(ctx, field)
-			case "checkInDate":
-				return ec.fieldContext_Booking_checkInDate(ctx, field)
-			case "checkOutDate":
-				return ec.fieldContext_Booking_checkOutDate(ctx, field)
-			case "status":
-				return ec.fieldContext_Booking_status(ctx, field)
-			case "paymentStatus":
-				return ec.fieldContext_Booking_paymentStatus(ctx, field)
-			case "totalPrice":
-				return ec.fieldContext_Booking_totalPrice(ctx, field)
-			case "reference":
-				return ec.fieldContext_Booking_reference(ctx, field)
-			case "roomNumber":
-				return ec.fieldContext_Booking_roomNumber(ctx, field)
-			case "expiresAt":
-				return ec.fieldContext_Booking_expiresAt(ctx, field)
-			case "cancelledAt":
-				return ec.fieldContext_Booking_cancelledAt(ctx, field)
-			case "nightCount":
-				return ec.fieldContext_Booking_nightCount(ctx, field)
-			case "unitPrice":
-				return ec.fieldContext_Booking_unitPrice(ctx, field)
-			case "taxAmount":
-				return ec.fieldContext_Booking_taxAmount(ctx, field)
-			case "discount":
-				return ec.fieldContext_Booking_discount(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type Booking", field.Name)
-		},
-	}
-	return fc, nil
-}
-
 func (ec *executionContext) _Room_roomNumber(ctx context.Context, field graphql.CollectedField, obj *model.Room) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -4412,6 +5014,108 @@ func (ec *executionContext) fieldContext_Room_amenities(_ context.Context, field
 	return fc, nil
 }
 
+func (ec *executionContext) _Room_images(ctx context.Context, field graphql.CollectedField, obj *model.Room) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Room_images,
+		func(ctx context.Context) (any, error) {
+			return obj.Images, nil
+		},
+		nil,
+		ec.marshalORoomImage2ᚕᚖgithubᚗcomᚋOctoetIxᚋHotelᚑBookingsᚑandᚑReservationᚋgraphᚋmodelᚐRoomImageᚄ,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_Room_images(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Room",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_RoomImage_id(ctx, field)
+			case "roomId":
+				return ec.fieldContext_RoomImage_roomId(ctx, field)
+			case "url":
+				return ec.fieldContext_RoomImage_url(ctx, field)
+			case "isPrimary":
+				return ec.fieldContext_RoomImage_isPrimary(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type RoomImage", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Room_bookings(ctx context.Context, field graphql.CollectedField, obj *model.Room) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Room_bookings,
+		func(ctx context.Context) (any, error) {
+			return obj.Bookings, nil
+		},
+		nil,
+		ec.marshalOBooking2ᚕᚖgithubᚗcomᚋOctoetIxᚋHotelᚑBookingsᚑandᚑReservationᚋgraphᚋmodelᚐBookingᚄ,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_Room_bookings(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Room",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Booking_id(ctx, field)
+			case "user":
+				return ec.fieldContext_Booking_user(ctx, field)
+			case "room":
+				return ec.fieldContext_Booking_room(ctx, field)
+			case "checkInDate":
+				return ec.fieldContext_Booking_checkInDate(ctx, field)
+			case "checkOutDate":
+				return ec.fieldContext_Booking_checkOutDate(ctx, field)
+			case "status":
+				return ec.fieldContext_Booking_status(ctx, field)
+			case "paymentStatus":
+				return ec.fieldContext_Booking_paymentStatus(ctx, field)
+			case "totalPrice":
+				return ec.fieldContext_Booking_totalPrice(ctx, field)
+			case "reference":
+				return ec.fieldContext_Booking_reference(ctx, field)
+			case "expiresAt":
+				return ec.fieldContext_Booking_expiresAt(ctx, field)
+			case "cancelledAt":
+				return ec.fieldContext_Booking_cancelledAt(ctx, field)
+			case "nightCount":
+				return ec.fieldContext_Booking_nightCount(ctx, field)
+			case "unitPrice":
+				return ec.fieldContext_Booking_unitPrice(ctx, field)
+			case "taxAmount":
+				return ec.fieldContext_Booking_taxAmount(ctx, field)
+			case "discount":
+				return ec.fieldContext_Booking_discount(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_Booking_createdAt(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Booking", field.Name)
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Room_reviews(ctx context.Context, field graphql.CollectedField, obj *model.Room) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -4455,6 +5159,93 @@ func (ec *executionContext) fieldContext_Room_reviews(_ context.Context, field g
 	return fc, nil
 }
 
+func (ec *executionContext) _Room_createdAt(ctx context.Context, field graphql.CollectedField, obj *model.Room) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Room_createdAt,
+		func(ctx context.Context) (any, error) {
+			return obj.CreatedAt, nil
+		},
+		nil,
+		ec.marshalNTime2timeᚐTime,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Room_createdAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Room",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Time does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Room_updatedAt(ctx context.Context, field graphql.CollectedField, obj *model.Room) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Room_updatedAt,
+		func(ctx context.Context) (any, error) {
+			return obj.UpdatedAt, nil
+		},
+		nil,
+		ec.marshalNTime2timeᚐTime,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Room_updatedAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Room",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Time does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Room_deletedAt(ctx context.Context, field graphql.CollectedField, obj *model.Room) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Room_deletedAt,
+		func(ctx context.Context) (any, error) {
+			return obj.DeletedAt, nil
+		},
+		nil,
+		ec.marshalOTime2ᚖtimeᚐTime,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_Room_deletedAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Room",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Time does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _RoomConnection_rooms(ctx context.Context, field graphql.CollectedField, obj *model.RoomConnection) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -4489,14 +5280,22 @@ func (ec *executionContext) fieldContext_RoomConnection_rooms(_ context.Context,
 				return ec.fieldContext_Room_price(ctx, field)
 			case "status":
 				return ec.fieldContext_Room_status(ctx, field)
-			case "bookings":
-				return ec.fieldContext_Room_bookings(ctx, field)
 			case "roomNumber":
 				return ec.fieldContext_Room_roomNumber(ctx, field)
 			case "amenities":
 				return ec.fieldContext_Room_amenities(ctx, field)
+			case "images":
+				return ec.fieldContext_Room_images(ctx, field)
+			case "bookings":
+				return ec.fieldContext_Room_bookings(ctx, field)
 			case "reviews":
 				return ec.fieldContext_Room_reviews(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_Room_createdAt(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_Room_updatedAt(ctx, field)
+			case "deletedAt":
+				return ec.fieldContext_Room_deletedAt(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Room", field.Name)
 		},
@@ -4586,6 +5385,122 @@ func (ec *executionContext) fieldContext_RoomConnection_limit(_ context.Context,
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _RoomImage_id(ctx context.Context, field graphql.CollectedField, obj *model.RoomImage) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_RoomImage_id,
+		func(ctx context.Context) (any, error) {
+			return obj.ID, nil
+		},
+		nil,
+		ec.marshalNID2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_RoomImage_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "RoomImage",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _RoomImage_roomId(ctx context.Context, field graphql.CollectedField, obj *model.RoomImage) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_RoomImage_roomId,
+		func(ctx context.Context) (any, error) {
+			return obj.RoomID, nil
+		},
+		nil,
+		ec.marshalNID2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_RoomImage_roomId(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "RoomImage",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _RoomImage_url(ctx context.Context, field graphql.CollectedField, obj *model.RoomImage) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_RoomImage_url,
+		func(ctx context.Context) (any, error) {
+			return obj.URL, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_RoomImage_url(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "RoomImage",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _RoomImage_isPrimary(ctx context.Context, field graphql.CollectedField, obj *model.RoomImage) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_RoomImage_isPrimary,
+		func(ctx context.Context) (any, error) {
+			return obj.IsPrimary, nil
+		},
+		nil,
+		ec.marshalNBoolean2bool,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_RoomImage_isPrimary(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "RoomImage",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
 		},
 	}
 	return fc, nil
@@ -4794,6 +5709,35 @@ func (ec *executionContext) fieldContext_User_updatedAt(_ context.Context, field
 	return fc, nil
 }
 
+func (ec *executionContext) _User_deletedAt(ctx context.Context, field graphql.CollectedField, obj *model.User) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_User_deletedAt,
+		func(ctx context.Context) (any, error) {
+			return obj.DeletedAt, nil
+		},
+		nil,
+		ec.marshalOTime2ᚖtimeᚐTime,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_User_deletedAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "User",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Time does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _User_reviews(ctx context.Context, field graphql.CollectedField, obj *model.User) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -4865,8 +5809,8 @@ func (ec *executionContext) fieldContext_User_bookings(_ context.Context, field 
 				return ec.fieldContext_Booking_id(ctx, field)
 			case "user":
 				return ec.fieldContext_Booking_user(ctx, field)
-			case "roomId":
-				return ec.fieldContext_Booking_roomId(ctx, field)
+			case "room":
+				return ec.fieldContext_Booking_room(ctx, field)
 			case "checkInDate":
 				return ec.fieldContext_Booking_checkInDate(ctx, field)
 			case "checkOutDate":
@@ -4879,8 +5823,6 @@ func (ec *executionContext) fieldContext_User_bookings(_ context.Context, field 
 				return ec.fieldContext_Booking_totalPrice(ctx, field)
 			case "reference":
 				return ec.fieldContext_Booking_reference(ctx, field)
-			case "roomNumber":
-				return ec.fieldContext_Booking_roomNumber(ctx, field)
 			case "expiresAt":
 				return ec.fieldContext_Booking_expiresAt(ctx, field)
 			case "cancelledAt":
@@ -4893,8 +5835,148 @@ func (ec *executionContext) fieldContext_User_bookings(_ context.Context, field 
 				return ec.fieldContext_Booking_taxAmount(ctx, field)
 			case "discount":
 				return ec.fieldContext_Booking_discount(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_Booking_createdAt(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Booking", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _UserConnection_users(ctx context.Context, field graphql.CollectedField, obj *model.UserConnection) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_UserConnection_users,
+		func(ctx context.Context) (any, error) {
+			return obj.Users, nil
+		},
+		nil,
+		ec.marshalNUser2ᚕᚖgithubᚗcomᚋOctoetIxᚋHotelᚑBookingsᚑandᚑReservationᚋgraphᚋmodelᚐUserᚄ,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_UserConnection_users(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "UserConnection",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_User_id(ctx, field)
+			case "name":
+				return ec.fieldContext_User_name(ctx, field)
+			case "email":
+				return ec.fieldContext_User_email(ctx, field)
+			case "role":
+				return ec.fieldContext_User_role(ctx, field)
+			case "isActive":
+				return ec.fieldContext_User_isActive(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_User_createdAt(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_User_updatedAt(ctx, field)
+			case "deletedAt":
+				return ec.fieldContext_User_deletedAt(ctx, field)
+			case "reviews":
+				return ec.fieldContext_User_reviews(ctx, field)
+			case "bookings":
+				return ec.fieldContext_User_bookings(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _UserConnection_total(ctx context.Context, field graphql.CollectedField, obj *model.UserConnection) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_UserConnection_total,
+		func(ctx context.Context) (any, error) {
+			return obj.Total, nil
+		},
+		nil,
+		ec.marshalNInt2int32,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_UserConnection_total(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "UserConnection",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _UserConnection_page(ctx context.Context, field graphql.CollectedField, obj *model.UserConnection) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_UserConnection_page,
+		func(ctx context.Context) (any, error) {
+			return obj.Page, nil
+		},
+		nil,
+		ec.marshalNInt2int32,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_UserConnection_page(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "UserConnection",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _UserConnection_limit(ctx context.Context, field graphql.CollectedField, obj *model.UserConnection) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_UserConnection_limit,
+		func(ctx context.Context) (any, error) {
+			return obj.Limit, nil
+		},
+		nil,
+		ec.marshalNInt2int32,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_UserConnection_limit(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "UserConnection",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
 		},
 	}
 	return fc, nil
@@ -6588,7 +7670,7 @@ func (ec *executionContext) unmarshalInputMakePaymentInput(ctx context.Context, 
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"bookingId", "amount"}
+	fieldsInOrder := [...]string{"bookingId", "amount", "provider"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -6609,6 +7691,13 @@ func (ec *executionContext) unmarshalInputMakePaymentInput(ctx context.Context, 
 				return it, err
 			}
 			it.Amount = data
+		case "provider":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("provider"))
+			data, err := ec.unmarshalNPaymentProvider2githubᚗcomᚋOctoetIxᚋHotelᚑBookingsᚑandᚑReservationᚋgraphᚋmodelᚐPaymentProvider(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Provider = data
 		}
 	}
 	return it, nil
@@ -6731,7 +7820,7 @@ func (ec *executionContext) unmarshalInputUpdateRoomInput(ctx context.Context, o
 			it.Description = data
 		case "price":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("price"))
-			data, err := ec.unmarshalNInt642int64(ctx, v)
+			data, err := ec.unmarshalOInt642ᚖint64(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -6766,11 +7855,73 @@ func (ec *executionContext) unmarshalInputUpdateRoomInput(ctx context.Context, o
 
 // region    ************************** interface.gotpl ***************************
 
+func (ec *executionContext) _Node(ctx context.Context, sel ast.SelectionSet, obj model.Node) graphql.Marshaler {
+	switch obj := (obj).(type) {
+	case nil:
+		return graphql.Null
+	case model.User:
+		return ec._User(ctx, sel, &obj)
+	case *model.User:
+		if obj == nil {
+			return graphql.Null
+		}
+		return ec._User(ctx, sel, obj)
+	case model.RoomImage:
+		return ec._RoomImage(ctx, sel, &obj)
+	case *model.RoomImage:
+		if obj == nil {
+			return graphql.Null
+		}
+		return ec._RoomImage(ctx, sel, obj)
+	case model.Room:
+		return ec._Room(ctx, sel, &obj)
+	case *model.Room:
+		if obj == nil {
+			return graphql.Null
+		}
+		return ec._Room(ctx, sel, obj)
+	case model.Review:
+		return ec._Review(ctx, sel, &obj)
+	case *model.Review:
+		if obj == nil {
+			return graphql.Null
+		}
+		return ec._Review(ctx, sel, obj)
+	case model.Payment:
+		return ec._Payment(ctx, sel, &obj)
+	case *model.Payment:
+		if obj == nil {
+			return graphql.Null
+		}
+		return ec._Payment(ctx, sel, obj)
+	case model.Booking:
+		return ec._Booking(ctx, sel, &obj)
+	case *model.Booking:
+		if obj == nil {
+			return graphql.Null
+		}
+		return ec._Booking(ctx, sel, obj)
+	case model.AuditLog:
+		return ec._AuditLog(ctx, sel, &obj)
+	case *model.AuditLog:
+		if obj == nil {
+			return graphql.Null
+		}
+		return ec._AuditLog(ctx, sel, obj)
+	default:
+		if typedObj, ok := obj.(graphql.Marshaler); ok {
+			return typedObj
+		} else {
+			panic(fmt.Errorf("unexpected type %T; non-generated variants of Node must implement graphql.Marshaler", obj))
+		}
+	}
+}
+
 // endregion ************************** interface.gotpl ***************************
 
 // region    **************************** object.gotpl ****************************
 
-var auditLogImplementors = []string{"AuditLog"}
+var auditLogImplementors = []string{"AuditLog", "Node"}
 
 func (ec *executionContext) _AuditLog(ctx context.Context, sel ast.SelectionSet, obj *model.AuditLog) graphql.Marshaler {
 	fields := graphql.CollectFields(ec.OperationContext, sel, auditLogImplementors)
@@ -6944,7 +8095,7 @@ func (ec *executionContext) _AuthPayload(ctx context.Context, sel ast.SelectionS
 	return out
 }
 
-var bookingImplementors = []string{"Booking"}
+var bookingImplementors = []string{"Booking", "Node"}
 
 func (ec *executionContext) _Booking(ctx context.Context, sel ast.SelectionSet, obj *model.Booking) graphql.Marshaler {
 	fields := graphql.CollectFields(ec.OperationContext, sel, bookingImplementors)
@@ -6965,8 +8116,8 @@ func (ec *executionContext) _Booking(ctx context.Context, sel ast.SelectionSet, 
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
-		case "roomId":
-			out.Values[i] = ec._Booking_roomId(ctx, field, obj)
+		case "room":
+			out.Values[i] = ec._Booking_room(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -7000,11 +8151,6 @@ func (ec *executionContext) _Booking(ctx context.Context, sel ast.SelectionSet, 
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
-		case "roomNumber":
-			out.Values[i] = ec._Booking_roomNumber(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
 		case "expiresAt":
 			out.Values[i] = ec._Booking_expiresAt(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
@@ -7023,6 +8169,65 @@ func (ec *executionContext) _Booking(ctx context.Context, sel ast.SelectionSet, 
 			out.Values[i] = ec._Booking_taxAmount(ctx, field, obj)
 		case "discount":
 			out.Values[i] = ec._Booking_discount(ctx, field, obj)
+		case "createdAt":
+			out.Values[i] = ec._Booking_createdAt(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var bookingConnectionImplementors = []string{"BookingConnection"}
+
+func (ec *executionContext) _BookingConnection(ctx context.Context, sel ast.SelectionSet, obj *model.BookingConnection) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, bookingConnectionImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("BookingConnection")
+		case "bookings":
+			out.Values[i] = ec._BookingConnection_bookings(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "total":
+			out.Values[i] = ec._BookingConnection_total(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "page":
+			out.Values[i] = ec._BookingConnection_page(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "limit":
+			out.Values[i] = ec._BookingConnection_limit(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -7114,6 +8319,13 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "updateRoom":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_updateRoom(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		case "updateRoomStatus":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_updateRoomStatus(ctx, field)
@@ -7179,7 +8391,7 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 	return out
 }
 
-var paymentImplementors = []string{"Payment"}
+var paymentImplementors = []string{"Payment", "Node"}
 
 func (ec *executionContext) _Payment(ctx context.Context, sel ast.SelectionSet, obj *model.Payment) graphql.Marshaler {
 	fields := graphql.CollectFields(ec.OperationContext, sel, paymentImplementors)
@@ -7202,6 +8414,16 @@ func (ec *executionContext) _Payment(ctx context.Context, sel ast.SelectionSet, 
 			}
 		case "amount":
 			out.Values[i] = ec._Payment_amount(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "provider":
+			out.Values[i] = ec._Payment_provider(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "transactionReference":
+			out.Values[i] = ec._Payment_transactionReference(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -7308,6 +8530,28 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_rooms(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "roomAvailability":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_roomAvailability(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}
@@ -7502,7 +8746,7 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 	return out
 }
 
-var reviewImplementors = []string{"Review"}
+var reviewImplementors = []string{"Review", "Node"}
 
 func (ec *executionContext) _Review(ctx context.Context, sel ast.SelectionSet, obj *model.Review) graphql.Marshaler {
 	fields := graphql.CollectFields(ec.OperationContext, sel, reviewImplementors)
@@ -7563,7 +8807,7 @@ func (ec *executionContext) _Review(ctx context.Context, sel ast.SelectionSet, o
 	return out
 }
 
-var roomImplementors = []string{"Room"}
+var roomImplementors = []string{"Room", "Node"}
 
 func (ec *executionContext) _Room(ctx context.Context, sel ast.SelectionSet, obj *model.Room) graphql.Marshaler {
 	fields := graphql.CollectFields(ec.OperationContext, sel, roomImplementors)
@@ -7596,8 +8840,6 @@ func (ec *executionContext) _Room(ctx context.Context, sel ast.SelectionSet, obj
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
-		case "bookings":
-			out.Values[i] = ec._Room_bookings(ctx, field, obj)
 		case "roomNumber":
 			out.Values[i] = ec._Room_roomNumber(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
@@ -7605,8 +8847,24 @@ func (ec *executionContext) _Room(ctx context.Context, sel ast.SelectionSet, obj
 			}
 		case "amenities":
 			out.Values[i] = ec._Room_amenities(ctx, field, obj)
+		case "images":
+			out.Values[i] = ec._Room_images(ctx, field, obj)
+		case "bookings":
+			out.Values[i] = ec._Room_bookings(ctx, field, obj)
 		case "reviews":
 			out.Values[i] = ec._Room_reviews(ctx, field, obj)
+		case "createdAt":
+			out.Values[i] = ec._Room_createdAt(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "updatedAt":
+			out.Values[i] = ec._Room_updatedAt(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "deletedAt":
+			out.Values[i] = ec._Room_deletedAt(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -7684,7 +8942,61 @@ func (ec *executionContext) _RoomConnection(ctx context.Context, sel ast.Selecti
 	return out
 }
 
-var userImplementors = []string{"User"}
+var roomImageImplementors = []string{"RoomImage", "Node"}
+
+func (ec *executionContext) _RoomImage(ctx context.Context, sel ast.SelectionSet, obj *model.RoomImage) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, roomImageImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("RoomImage")
+		case "id":
+			out.Values[i] = ec._RoomImage_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "roomId":
+			out.Values[i] = ec._RoomImage_roomId(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "url":
+			out.Values[i] = ec._RoomImage_url(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "isPrimary":
+			out.Values[i] = ec._RoomImage_isPrimary(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var userImplementors = []string{"User", "Node"}
 
 func (ec *executionContext) _User(ctx context.Context, sel ast.SelectionSet, obj *model.User) graphql.Marshaler {
 	fields := graphql.CollectFields(ec.OperationContext, sel, userImplementors)
@@ -7730,10 +9042,66 @@ func (ec *executionContext) _User(ctx context.Context, sel ast.SelectionSet, obj
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "deletedAt":
+			out.Values[i] = ec._User_deletedAt(ctx, field, obj)
 		case "reviews":
 			out.Values[i] = ec._User_reviews(ctx, field, obj)
 		case "bookings":
 			out.Values[i] = ec._User_bookings(ctx, field, obj)
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var userConnectionImplementors = []string{"UserConnection"}
+
+func (ec *executionContext) _UserConnection(ctx context.Context, sel ast.SelectionSet, obj *model.UserConnection) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, userConnectionImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("UserConnection")
+		case "users":
+			out.Values[i] = ec._UserConnection_users(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "total":
+			out.Values[i] = ec._UserConnection_total(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "page":
+			out.Values[i] = ec._UserConnection_page(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "limit":
+			out.Values[i] = ec._UserConnection_limit(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -8176,6 +9544,20 @@ func (ec *executionContext) marshalNBooking2ᚖgithubᚗcomᚋOctoetIxᚋHotel�
 	return ec._Booking(ctx, sel, v)
 }
 
+func (ec *executionContext) marshalNBookingConnection2githubᚗcomᚋOctoetIxᚋHotelᚑBookingsᚑandᚑReservationᚋgraphᚋmodelᚐBookingConnection(ctx context.Context, sel ast.SelectionSet, v model.BookingConnection) graphql.Marshaler {
+	return ec._BookingConnection(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNBookingConnection2ᚖgithubᚗcomᚋOctoetIxᚋHotelᚑBookingsᚑandᚑReservationᚋgraphᚋmodelᚐBookingConnection(ctx context.Context, sel ast.SelectionSet, v *model.BookingConnection) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._BookingConnection(ctx, sel, v)
+}
+
 func (ec *executionContext) unmarshalNBookingStatus2githubᚗcomᚋOctoetIxᚋHotelᚑBookingsᚑandᚑReservationᚋgraphᚋmodelᚐBookingStatus(ctx context.Context, v any) (model.BookingStatus, error) {
 	var res model.BookingStatus
 	err := res.UnmarshalGQL(v)
@@ -8289,6 +9671,16 @@ func (ec *executionContext) marshalNPayment2ᚖgithubᚗcomᚋOctoetIxᚋHotel�
 	return ec._Payment(ctx, sel, v)
 }
 
+func (ec *executionContext) unmarshalNPaymentProvider2githubᚗcomᚋOctoetIxᚋHotelᚑBookingsᚑandᚑReservationᚋgraphᚋmodelᚐPaymentProvider(ctx context.Context, v any) (model.PaymentProvider, error) {
+	var res model.PaymentProvider
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNPaymentProvider2githubᚗcomᚋOctoetIxᚋHotelᚑBookingsᚑandᚑReservationᚋgraphᚋmodelᚐPaymentProvider(ctx context.Context, sel ast.SelectionSet, v model.PaymentProvider) graphql.Marshaler {
+	return v
+}
+
 func (ec *executionContext) unmarshalNPaymentStatus2githubᚗcomᚋOctoetIxᚋHotelᚑBookingsᚑandᚑReservationᚋgraphᚋmodelᚐPaymentStatus(ctx context.Context, v any) (model.PaymentStatus, error) {
 	var res model.PaymentStatus
 	err := res.UnmarshalGQL(v)
@@ -8372,6 +9764,16 @@ func (ec *executionContext) marshalNRoomConnection2ᚖgithubᚗcomᚋOctoetIxᚋ
 	return ec._RoomConnection(ctx, sel, v)
 }
 
+func (ec *executionContext) marshalNRoomImage2ᚖgithubᚗcomᚋOctoetIxᚋHotelᚑBookingsᚑandᚑReservationᚋgraphᚋmodelᚐRoomImage(ctx context.Context, sel ast.SelectionSet, v *model.RoomImage) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._RoomImage(ctx, sel, v)
+}
+
 func (ec *executionContext) unmarshalNRoomStatus2githubᚗcomᚋOctoetIxᚋHotelᚑBookingsᚑandᚑReservationᚋgraphᚋmodelᚐRoomStatus(ctx context.Context, v any) (model.RoomStatus, error) {
 	var res model.RoomStatus
 	err := res.UnmarshalGQL(v)
@@ -8414,6 +9816,11 @@ func (ec *executionContext) marshalNTime2timeᚐTime(ctx context.Context, sel as
 	return res
 }
 
+func (ec *executionContext) unmarshalNUpdateRoomInput2githubᚗcomᚋOctoetIxᚋHotelᚑBookingsᚑandᚑReservationᚋgraphᚋmodelᚐUpdateRoomInput(ctx context.Context, v any) (model.UpdateRoomInput, error) {
+	res, err := ec.unmarshalInputUpdateRoomInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
 func (ec *executionContext) marshalNUser2githubᚗcomᚋOctoetIxᚋHotelᚑBookingsᚑandᚑReservationᚋgraphᚋmodelᚐUser(ctx context.Context, sel ast.SelectionSet, v model.User) graphql.Marshaler {
 	return ec._User(ctx, sel, &v)
 }
@@ -8442,6 +9849,20 @@ func (ec *executionContext) marshalNUser2ᚖgithubᚗcomᚋOctoetIxᚋHotelᚑBo
 		return graphql.Null
 	}
 	return ec._User(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNUserConnection2githubᚗcomᚋOctoetIxᚋHotelᚑBookingsᚑandᚑReservationᚋgraphᚋmodelᚐUserConnection(ctx context.Context, sel ast.SelectionSet, v model.UserConnection) graphql.Marshaler {
+	return ec._UserConnection(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNUserConnection2ᚖgithubᚗcomᚋOctoetIxᚋHotelᚑBookingsᚑandᚑReservationᚋgraphᚋmodelᚐUserConnection(ctx context.Context, sel ast.SelectionSet, v *model.UserConnection) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._UserConnection(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalN__Directive2githubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐDirective(ctx context.Context, sel ast.SelectionSet, v introspection.Directive) graphql.Marshaler {
@@ -8728,6 +10149,25 @@ func (ec *executionContext) marshalORoom2ᚖgithubᚗcomᚋOctoetIxᚋHotelᚑBo
 		return graphql.Null
 	}
 	return ec._Room(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalORoomImage2ᚕᚖgithubᚗcomᚋOctoetIxᚋHotelᚑBookingsᚑandᚑReservationᚋgraphᚋmodelᚐRoomImageᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.RoomImage) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNRoomImage2ᚖgithubᚗcomᚋOctoetIxᚋHotelᚑBookingsᚑandᚑReservationᚋgraphᚋmodelᚐRoomImage(ctx, sel, v[i])
+	})
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
 }
 
 func (ec *executionContext) unmarshalORoomStatus2ᚖgithubᚗcomᚋOctoetIxᚋHotelᚑBookingsᚑandᚑReservationᚋgraphᚋmodelᚐRoomStatus(ctx context.Context, v any) (*model.RoomStatus, error) {

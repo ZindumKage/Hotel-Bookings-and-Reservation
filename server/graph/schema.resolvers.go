@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/OctoetIx/Hotel-Bookings-and-Reservation/graph/model"
 	"github.com/OctoetIx/Hotel-Bookings-and-Reservation/pkg/domain/audit_logs"
@@ -88,6 +89,11 @@ func (r *mutationResolver) CreateRoom(ctx context.Context, input model.CreateRoo
 	return MapToGraphQLRoom(room), nil
 }
 
+// UpdateRoom is the resolver for the updateRoom field.
+func (r *mutationResolver) UpdateRoom(ctx context.Context, input model.UpdateRoomInput) (*model.Room, error) {
+	panic(fmt.Errorf("not implemented: UpdateRoom - updateRoom"))
+}
+
 // UpdateRoomStatus is the resolver for the updateRoomStatus field.
 func (r *mutationResolver) UpdateRoomStatus(ctx context.Context, roomID string, status model.RoomStatus) (*model.Room, error) {
 	id, err := strconv.Atoi(roomID)
@@ -120,18 +126,18 @@ func (r *mutationResolver) ConfirmBooking(ctx context.Context, id string) (*mode
 	if user.Role != "ADMIN" {
 		return nil, fmt.Errorf("forbidden")
 	}
-bookingID, err := strconv.Atoi(id)
-if err != nil {
-	return nil, fmt.Errorf("invalid booking id: %s", id)
-}
-if err := r.BookingService.ConfirmPaymentAndBooking(uint(bookingID)); err != nil {
-	return nil, err
-}
-b, err := r.BookingService.GetBookingByID(uint(bookingID))
-if err != nil {
-	return nil, err
-}
-return MapToGraphQLBooking(b), nil
+	bookingID, err := strconv.Atoi(id)
+	if err != nil {
+		return nil, fmt.Errorf("invalid booking id: %s", id)
+	}
+	if err := r.BookingService.ConfirmPaymentAndBooking(uint(bookingID)); err != nil {
+		return nil, err
+	}
+	b, err := r.BookingService.GetBookingByID(uint(bookingID))
+	if err != nil {
+		return nil, err
+	}
+	return MapToGraphQLBooking(b), nil
 }
 
 // ApproveRoom is the resolver for the approveRoom field.
@@ -192,7 +198,20 @@ func (r *mutationResolver) DeactivateUser(ctx context.Context, userID string) (*
 
 // Me is the resolver for the me field.
 func (r *queryResolver) Me(ctx context.Context) (*model.User, error) {
-	panic(fmt.Errorf("not implemented: Me - me"))
+	user, err := GetUserFromCtx(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("Unauthenticated")
+	}
+	u, err := r.UserService.GetUserByID(user.ID)
+	if err != nil {
+		return nil, err
+	}
+	return &model.User{
+		ID: strconv.Itoa(int(u.ID)),
+		Name: u.Name,
+		Email: u.Email,
+		Role: model.Role(u.Role),
+	}, nil
 }
 
 // Room is the resolver for the single room field.
@@ -265,17 +284,41 @@ func (r *queryResolver) Rooms(ctx context.Context, status *model.RoomStatus, pag
 	}, nil
 }
 
+// RoomAvailability is the resolver for the roomAvailability field.
+func (r *queryResolver) RoomAvailability(ctx context.Context, roomID string, checkInDate time.Time, checkOutDate time.Time) (bool, error) {
+	panic(fmt.Errorf("not implemented: RoomAvailability - roomAvailability"))
+}
+
 // MyBookings is the resolver for the myBookings field.
-func (r *queryResolver) MyBookings(ctx context.Context) ([]*model.Booking, error) {
+func (r *queryResolver) MyBookings(ctx context.Context, pagination *model.PaginationInput) (*model.BookingConnection, error) {
 	user, err := GetUserFromCtx(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("unauthenticated")
 	}
-	bookings, err := r.BookingService.GetBookingsByUserID(user.ID)
+
+	page := 1
+	limit := 20
+
+	if pagination != nil {
+		if pagination.Page != nil {
+			page = int(*pagination.Page)
+		}
+		if pagination.Limit != nil {
+			limit = int(*pagination.Limit)
+		}
+	}
+
+	bookings, total, err := r.BookingService.GetBookingsByUserID(user.ID, page, limit)
 	if err != nil {
 		return nil, err
 	}
-	return MapToGraphQLBookings(bookings), nil
+
+	return &model.BookingConnection{
+		Bookings: MapToGraphQLBookings(bookings),
+		Total:    int32(total),
+		Page:     int32(page),
+		Limit:    int32(limit),
+	}, nil
 }
 
 // Booking is the resolver for the booking field.
@@ -284,25 +327,39 @@ func (r *queryResolver) Booking(ctx context.Context, id string) (*model.Booking,
 	if err != nil {
 		return nil, err
 	}
-bookingID, err := strconv.Atoi(id)
-if err != nil {
-	return nil, fmt.Errorf("invalid booking id")
-}
-b,err := r.BookingService.GetBookingByID(uint(bookingID))
-if err != nil {
-	return nil, err
-}
- if user.Role != "ADMIN" && b.UserID != user.ID {
-	return nil, fmt.Errorf("forbidden")
-}
-return MapToGraphQLBooking(b), nil
-}
-// Users is the resolver for the users field.
-func (r *queryResolver) Users(ctx context.Context) ([]*model.User, error) {
-	users, err := r.UserService.GetAllUsers()
+	bookingID, err := strconv.Atoi(id)
+	if err != nil {
+		return nil, fmt.Errorf("invalid booking id")
+	}
+	b, err := r.BookingService.GetBookingByID(uint(bookingID))
 	if err != nil {
 		return nil, err
 	}
+	if user.Role != "ADMIN" && b.UserID != user.ID {
+		return nil, fmt.Errorf("forbidden")
+	}
+	return MapToGraphQLBooking(b), nil
+}
+
+// Users is the resolver for the users field.
+func (r *queryResolver) Users(ctx context.Context, pagination *model.PaginationInput) (*model.UserConnection, error) {
+	page := 1
+	limit := 20
+
+	if pagination != nil {
+		if pagination.Page != nil {
+			page = int(*pagination.Page)
+		}
+		if pagination.Limit != nil {
+			limit = int(*pagination.Limit)
+		}
+	}
+
+	users, total, err := r.UserService.GetAllUsers(page, limit)
+	if err != nil {
+		return nil, err
+	}
+
 	result := make([]*model.User, len(users))
 	for i, u := range users {
 		result[i] = &model.User{
@@ -312,7 +369,13 @@ func (r *queryResolver) Users(ctx context.Context) ([]*model.User, error) {
 			Role:  model.Role(u.Role),
 		}
 	}
-	return result, nil
+
+	return &model.UserConnection{
+		Users: result,
+		Total: int32(total),
+		Page:  int32(page),
+		Limit: int32(limit),
+	}, nil
 }
 
 // User is the resolver for the user field.
@@ -336,12 +399,12 @@ func (r *queryResolver) User(ctx context.Context, id string) (*model.User, error
 }
 
 // AdminBookings is the resolver for the adminBookings field.
-func (r *queryResolver) AdminBookings(ctx context.Context) ([]*model.Booking, error) {
+func (r *queryResolver) AdminBookings(ctx context.Context, pagination *model.PaginationInput) (*model.BookingConnection, error) {
 	panic(fmt.Errorf("not implemented: AdminBookings - adminBookings"))
 }
 
 // AllBookings is the resolver for the allBookings field.
-func (r *queryResolver) AllBookings(ctx context.Context) ([]*model.Booking, error) {
+func (r *queryResolver) AllBookings(ctx context.Context, pagination *model.PaginationInput) (*model.BookingConnection, error) {
 	user, err := GetUserFromCtx(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("unauthenticated")
@@ -353,7 +416,12 @@ func (r *queryResolver) AllBookings(ctx context.Context) ([]*model.Booking, erro
 	if err != nil {
 		return nil, err
 	}
-	return MapToGraphQLBookings(bookings), nil
+	return &model.BookingConnection{
+	Bookings: MapToGraphQLBookings(bookings),
+	Total:    int32(len(bookings)),
+	Page:     1,
+	Limit:    int32(len(bookings)),
+}, nil
 }
 
 // AuditLogs is the resolver for the auditLogs field.

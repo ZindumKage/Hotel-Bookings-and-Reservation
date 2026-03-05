@@ -69,7 +69,7 @@ func (s *Service) GetBookingByID(id uint) (*domain.Booking, error) {
 	return s.repo.FindByID(id)
 }
 
-func (s *Service) GetBookingsByUserID(userID uint) ([]domain.Booking, error) {
+func (s *Service) GetBookingsByUserID(userID uint, page, limit int) ([]domain.Booking, error) {
 	return s.repo.FindByUser(userID)
 }
 

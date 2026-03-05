@@ -1,7 +1,7 @@
 package graph
 
 import (
-	"fmt"
+	
 	"strconv"
 
 	"github.com/OctoetIx/Hotel-Bookings-and-Reservation/graph/model"
@@ -70,25 +70,35 @@ func MapToGraphQLBookings(bookings []booking.Booking) []*model.Booking {
 	}
 	return result
 }
-
 func MapToGraphQLBooking(b *booking.Booking) *model.Booking {
-
 	return &model.Booking{
-		ID:            fmt.Sprintf("%d", b.ID),
-		Reference:     b.Reference,
-		User:          fmt.Sprintf("%d", b.UserID),
-		RoomID:        fmt.Sprintf("%d", b.RoomID),
-		RoomNumber:    b.RoomNumber,
-		CheckInDate:   b.CheckInDate,
-		CheckOutDate:  b.CheckOutDate,
-		NightCount:    int64(b.NightCount),
-		UnitPrice:     &b.UnitPrice,
-		TaxAmount:     &b.TaxAmount,
-		Discount:      &b.Discount,
-		TotalPrice:    int64(b.TotalPrice),
+		ID: strconv.Itoa(int(b.ID)),
+
+		User: &model.User{
+			ID: strconv.Itoa(int(b.UserID)),
+		},
+
+		Room: &model.Room{
+			ID: strconv.Itoa(int(b.RoomID)),
+		},
+
+		Reference: b.Reference,
+
+		CheckInDate:  b.CheckInDate,
+		CheckOutDate: b.CheckOutDate,
+
+		NightCount: int64(b.NightCount),
+
+		UnitPrice: &b.UnitPrice,
+		TaxAmount: &b.TaxAmount,
+		Discount:  &b.Discount,
+
+		TotalPrice: int64(b.TotalPrice),
+
 		Status:        model.BookingStatus(b.Status),
 		PaymentStatus: model.PaymentStatus(b.PaymentStatus),
-		ExpiresAt:     b.ExpiresAt,
-		CancelledAt:   b.CancelledAt,
+
+		ExpiresAt:   b.ExpiresAt,
+		CancelledAt: b.CancelledAt,
 	}
 }

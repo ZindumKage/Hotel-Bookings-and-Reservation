@@ -35,3 +35,11 @@ func ToUserDomain(m *models.UserModel) *user.User {
 		IsActive: m.IsActive,
 	}
 }
+
+func ToUserDomains(models []models.UserModel) []*user.User {
+	var result []*user.User
+	for i := range models {
+		result = append(result, ToUserDomain(&models[i]))
+	}
+	return result
+}
