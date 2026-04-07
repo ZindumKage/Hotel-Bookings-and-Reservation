@@ -1,12 +1,32 @@
 package models
 
-import "gorm.io/gorm"
+import (
+	"time"
+
+	"gorm.io/datatypes"
+)
 
 type AuditLog struct {
-	gorm.Model
-	UserID     uint   `gorm:"index"`
-	Action     string `gorm:"index"`
-	Entity     string `gorm:"index"`
-	RiskLevel  string `gorm:"index"`
-	Suspicious bool   `gorm:"index"`
+	ID uint `gorm:"primaryKey"`
+
+	UserID    uint
+	UserEmail string
+	UserRole  string
+
+	Action   string
+	Entity   string
+	EntityID string
+
+	BeforeState   datatypes.JSON
+	AfterState    datatypes.JSON
+	ChangedFields datatypes.JSON
+
+	RiskLevel  string
+	Suspicious bool
+	Reason     string
+
+	IPAddress string
+	UserAgent string
+
+	CreatedAt time.Time
 }

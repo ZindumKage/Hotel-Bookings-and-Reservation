@@ -1,4 +1,3 @@
-
 package audit_logs
 
 import (
@@ -39,29 +38,68 @@ func ComputeDiff(before, after json.RawMessage) json.RawMessage {
 
 // EvaluateRisk - naive example
 func EvaluateRisk(log *domain.AuditLog) (bool, string, string) {
-	if log.Action == "DELETE_USER" {
-		return true, string(domain.RiskHigh), "Deleting a user"
+
+	switch log.Action {
+
+	case "DELETE_USER":
+		return true, string(domain.RiskHigh), "User deletion"
+
+	case "PROMOTE_TO_ADMIN":
+		return true, string(domain.RiskCritical), "Privilege escalation"
+
+	case "LOGIN_FAILED":
+		return false, string(domain.RiskMedium), "Failed login"
+
+	case "SUSPICIOUS_LOGIN":
+		return true, string(domain.RiskHigh), "IP address change"
+
+	default:
+		return false, string(domain.RiskLow), ""
 	}
-	return false, string(domain.RiskLow), ""
 }
 
 // LogEvent - main usecase method
-func (s *Service) LogEvent(event *domain.AuditLog) error {
+func (s *Service) LogEvent(ctx context.Context, event *domain.AuditLog) error {
+
+	// compute field differences
 	event.ChangedFields = ComputeDiff(event.BeforeState, event.AfterState)
+
+	// risk evaluation
 	suspicious, level, reason := EvaluateRisk(event)
 	event.Suspicious = suspicious
 	event.RiskLevel = domain.RiskLevel(level)
 	event.Reason = reason
 
-	if err := s.repo.Save(event); err != nil {
+	// persist audit log
+	if err := s.repo.Save(ctx, event); err != nil {
 		return err
 	}
 
-	data, _ := json.Marshal(event)
-	s.pub.Publish("audit_events", data)
+	// serialize event for streaming
+	data, err := json.Marshal(event)
+	if err != nil {
+		return err
+	}
+
+	// publish asynchronously (do not block request)
+	go func() {
+		_ = s.pub.Publish("audit_events", data)
+	}()
+
 	return nil
 }
 
+
+func (s *Service) FindWithFilter(
+	ctx context.Context,
+	filter domain.AuditFilter,
+	page int,
+	limit int,
+) ([]domain.AuditLog, int64, error) {
+
+	return s.repo.FindWithFilter(ctx, filter, page, limit)
+}
+
 func (s *Service) GetAuditLogs(ctx context.Context, filter domain.AuditFilter, page, limit int) ([]domain.AuditLog, int64, error) {
-	return s.repo.FindWithFilter(filter, page, limit)
+	return s.repo.FindWithFilter(ctx,filter, page, limit)
 }

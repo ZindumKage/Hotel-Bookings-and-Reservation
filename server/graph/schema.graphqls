@@ -1,6 +1,9 @@
 scalar Time
 scalar Int64
 
+
+directive @hasRole(role: Role!) on FIELD_DEFINITION
+
 # ========================
 # INTERFACES
 # ========================
@@ -55,7 +58,7 @@ enum PaymentProvider {
 type User implements Node {
   id: ID!
   name: String!
-  email: String!
+  email: String! @hasRole(role: ADMIN)
   role: Role!
   isActive: Boolean!
   createdAt: Time!
@@ -228,6 +231,10 @@ input RegisterInput {
 input LoginInput {
   email: String!
   password: String!
+  deviceID: String!
+  deviceName: String
+  ipAddress: String
+  userAgent: String
 }
 
 input CreateRoomInput {
@@ -281,13 +288,15 @@ input AuditLogFilterInput {
   endDate: Time
 }
 
+
+
 # ========================
 # QUERIES
 # ========================
-
 type Query {
+
   # AUTH
-  me: User!
+  me: User! @hasRole(role: USER)
 
   # ROOMS
   room(id: ID!): Room
@@ -300,49 +309,49 @@ type Query {
   ): Boolean!
 
   # BOOKINGS
-  myBookings(pagination: PaginationInput): BookingConnection!
-  booking(id: ID!): Booking!
+  myBookings(pagination: PaginationInput): BookingConnection! @hasRole(role: USER)
+  booking(id: ID!): Booking! @hasRole(role: USER)
 
   # ADMIN
-  users(pagination: PaginationInput): UserConnection!
-  user(id: ID!): User
-  adminBookings(pagination: PaginationInput): BookingConnection!
+  users(pagination: PaginationInput): UserConnection! @hasRole(role: ADMIN)
+  user(id: ID!): User @hasRole(role: ADMIN)
+  adminBookings(pagination: PaginationInput): BookingConnection! @hasRole(role: ADMIN)
 
   # SUPER ADMIN
-  allBookings(pagination: PaginationInput): BookingConnection!
+  allBookings(pagination: PaginationInput): BookingConnection! @hasRole(role: SUPER_ADMIN)
 
   # AUDIT LOGS
   auditLogs(
     filter: AuditLogFilterInput
     pagination: PaginationInput
-  ): AuditLogConnection!
+  ): AuditLogConnection! @hasRole(role: SUPER_ADMIN)
 }
 
 # ========================
 # MUTATIONS
 # ========================
-
 type Mutation {
 
   # AUTH
   register(input: RegisterInput!): AuthPayload!
   login(input: LoginInput!): AuthPayload!
+  logoutAllDevices: Boolean! @hasRole(role: USER)
 
   # CUSTOMER
-  createBooking(input: CreateBookingInput!): Booking!
-  cancelBooking(id: ID!): Booking!
-  makePayment(input: MakePaymentInput!): Payment!
-  createReview(input: CreateReviewInput!): Review!
+  createBooking(input: CreateBookingInput!): Booking! @hasRole(role: USER)
+  cancelBooking(id: ID!): Booking! @hasRole(role: USER)
+  makePayment(input: MakePaymentInput!): Payment! @hasRole(role: USER)
+  createReview(input: CreateReviewInput!): Review! @hasRole(role: USER)
 
   # ADMIN
-  createRoom(input: CreateRoomInput!): Room!
-  updateRoom(input: UpdateRoomInput!): Room!
-  updateRoomStatus(roomId: ID!, status: RoomStatus!): Room!
-  confirmBooking(id: ID!): Booking!
+  createRoom(input: CreateRoomInput!): Room! @hasRole(role: ADMIN)
+  updateRoom(input: UpdateRoomInput!): Room! @hasRole(role: ADMIN)
+  updateRoomStatus(roomId: ID!, status: RoomStatus!): Room! @hasRole(role: ADMIN)
+  confirmBooking(id: ID!): Booking! @hasRole(role: ADMIN)
 
   # SUPER ADMIN
-  approveRoom(roomId: ID!): Room!
-  rejectRoom(roomId: ID!): Room!
-  promoteToAdmin(userId: ID!): User!
-  deactivateUser(userId: ID!): User!
+  approveRoom(roomId: ID!): Room! @hasRole(role: SUPER_ADMIN)
+  rejectRoom(roomId: ID!): Room! @hasRole(role: SUPER_ADMIN)
+  promoteToAdmin(userId: ID!): User! @hasRole(role: SUPER_ADMIN)
+  deactivateUser(userId: ID!): User! @hasRole(role: SUPER_ADMIN)
 }

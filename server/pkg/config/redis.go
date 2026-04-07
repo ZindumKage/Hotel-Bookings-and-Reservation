@@ -2,13 +2,14 @@ package config
 
 import (
 	"context"
+	"log"
 	"os"
 
 	"github.com/redis/go-redis/v9"
 )
 
 
-var Ctx = context .Background()
+var Ctx = context.Background()
 var Redis *redis.Client
 
 func ConnectRedis() {
@@ -21,5 +22,6 @@ func ConnectRedis() {
 	if err != nil {
 		panic("Failed to connect to Redis: " + err.Error())
 	}
+	log.Println("Redis Connected Successfully")
 }
 

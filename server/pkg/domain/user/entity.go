@@ -29,6 +29,9 @@ type User struct {
 
 	FailedLoginAttempts int
 	AccountLockedUntil *time.Time
+	
+	LastLoginIP         string
+	LastUserAgent       string 
 }
 
 type EmailVerification struct {
@@ -36,10 +39,37 @@ type EmailVerification struct {
 	UserID uint
 	Token string
 	ExpiresAt time.Time
+	CreatedAt time.Time
 }
 type PasswordReset struct {
 	ID uint
 	UserID uint
 	Token string
 	ExpiresAt time.Time
+	CreatedAt time.Time
+}
+type AuthPayload struct {
+	User         *User
+	AccessToken  string
+	RefreshToken string
+	DeviceID 	string
+}
+
+type RefreshToken struct {
+	ID uint
+	UserID uint
+	Token string
+	ExpiresAt time.Time
+	CreatedAt time.Time
+}
+
+type UserSession struct {
+	ID               uint
+	UserID           uint
+	DeviceID         string
+	RefreshTokenHash string
+	IPAddress        string
+	UserAgent        string
+	ExpiresAt        time.Time
+	CreatedAt        time.Time
 }

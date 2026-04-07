@@ -34,6 +34,7 @@ type ResolverRoot interface {
 }
 
 type DirectiveRoot struct {
+	HasRole func(ctx context.Context, obj any, next graphql.Resolver, role model.Role) (res any, err error)
 }
 
 type ComplexityRoot struct {
@@ -99,6 +100,7 @@ type ComplexityRoot struct {
 		CreateRoom       func(childComplexity int, input model.CreateRoomInput) int
 		DeactivateUser   func(childComplexity int, userID string) int
 		Login            func(childComplexity int, input model.LoginInput) int
+		LogoutAllDevices func(childComplexity int) int
 		MakePayment      func(childComplexity int, input model.MakePaymentInput) int
 		PromoteToAdmin   func(childComplexity int, userID string) int
 		Register         func(childComplexity int, input model.RegisterInput) int
@@ -194,6 +196,7 @@ type ComplexityRoot struct {
 type MutationResolver interface {
 	Register(ctx context.Context, input model.RegisterInput) (*model.AuthPayload, error)
 	Login(ctx context.Context, input model.LoginInput) (*model.AuthPayload, error)
+	LogoutAllDevices(ctx context.Context) (bool, error)
 	CreateBooking(ctx context.Context, input model.CreateBookingInput) (*model.Booking, error)
 	CancelBooking(ctx context.Context, id string) (*model.Booking, error)
 	MakePayment(ctx context.Context, input model.MakePaymentInput) (*model.Payment, error)
@@ -556,6 +559,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Mutation.Login(childComplexity, args["input"].(model.LoginInput)), true
+	case "Mutation.logoutAllDevices":
+		if e.ComplexityRoot.Mutation.LogoutAllDevices == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Mutation.LogoutAllDevices(childComplexity), true
 	case "Mutation.makePayment":
 		if e.ComplexityRoot.Mutation.MakePayment == nil {
 			break
@@ -1146,6 +1155,17 @@ var parsedSchema = gqlparser.MustLoadSchema(sources...)
 // endregion ************************** generated!.gotpl **************************
 
 // region    ***************************** args.gotpl *****************************
+
+func (ec *executionContext) dir_hasRole_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "role", ec.unmarshalNRole2githubᚗcomᚋOctoetIxᚋHotelᚑBookingsᚑandᚑReservationᚋgraphᚋmodelᚐRole)
+	if err != nil {
+		return nil, err
+	}
+	args["role"] = arg0
+	return args, nil
+}
 
 func (ec *executionContext) field_Mutation_approveRoom_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
@@ -2829,6 +2849,53 @@ func (ec *executionContext) fieldContext_Mutation_login(ctx context.Context, fie
 	return fc, nil
 }
 
+func (ec *executionContext) _Mutation_logoutAllDevices(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Mutation_logoutAllDevices,
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.Mutation().LogoutAllDevices(ctx)
+		},
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				role, err := ec.unmarshalNRole2githubᚗcomᚋOctoetIxᚋHotelᚑBookingsᚑandᚑReservationᚋgraphᚋmodelᚐRole(ctx, "USER")
+				if err != nil {
+					var zeroVal bool
+					return zeroVal, err
+				}
+				if ec.Directives.HasRole == nil {
+					var zeroVal bool
+					return zeroVal, errors.New("directive hasRole is not implemented")
+				}
+				return ec.Directives.HasRole(ctx, nil, directive0, role)
+			}
+
+			next = directive1
+			return next
+		},
+		ec.marshalNBoolean2bool,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Mutation_logoutAllDevices(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Mutation_createBooking(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -2839,7 +2906,25 @@ func (ec *executionContext) _Mutation_createBooking(ctx context.Context, field g
 			fc := graphql.GetFieldContext(ctx)
 			return ec.Resolvers.Mutation().CreateBooking(ctx, fc.Args["input"].(model.CreateBookingInput))
 		},
-		nil,
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				role, err := ec.unmarshalNRole2githubᚗcomᚋOctoetIxᚋHotelᚑBookingsᚑandᚑReservationᚋgraphᚋmodelᚐRole(ctx, "USER")
+				if err != nil {
+					var zeroVal *model.Booking
+					return zeroVal, err
+				}
+				if ec.Directives.HasRole == nil {
+					var zeroVal *model.Booking
+					return zeroVal, errors.New("directive hasRole is not implemented")
+				}
+				return ec.Directives.HasRole(ctx, nil, directive0, role)
+			}
+
+			next = directive1
+			return next
+		},
 		ec.marshalNBooking2ᚖgithubᚗcomᚋOctoetIxᚋHotelᚑBookingsᚑandᚑReservationᚋgraphᚋmodelᚐBooking,
 		true,
 		true,
@@ -2914,7 +2999,25 @@ func (ec *executionContext) _Mutation_cancelBooking(ctx context.Context, field g
 			fc := graphql.GetFieldContext(ctx)
 			return ec.Resolvers.Mutation().CancelBooking(ctx, fc.Args["id"].(string))
 		},
-		nil,
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				role, err := ec.unmarshalNRole2githubᚗcomᚋOctoetIxᚋHotelᚑBookingsᚑandᚑReservationᚋgraphᚋmodelᚐRole(ctx, "USER")
+				if err != nil {
+					var zeroVal *model.Booking
+					return zeroVal, err
+				}
+				if ec.Directives.HasRole == nil {
+					var zeroVal *model.Booking
+					return zeroVal, errors.New("directive hasRole is not implemented")
+				}
+				return ec.Directives.HasRole(ctx, nil, directive0, role)
+			}
+
+			next = directive1
+			return next
+		},
 		ec.marshalNBooking2ᚖgithubᚗcomᚋOctoetIxᚋHotelᚑBookingsᚑandᚑReservationᚋgraphᚋmodelᚐBooking,
 		true,
 		true,
@@ -2989,7 +3092,25 @@ func (ec *executionContext) _Mutation_makePayment(ctx context.Context, field gra
 			fc := graphql.GetFieldContext(ctx)
 			return ec.Resolvers.Mutation().MakePayment(ctx, fc.Args["input"].(model.MakePaymentInput))
 		},
-		nil,
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				role, err := ec.unmarshalNRole2githubᚗcomᚋOctoetIxᚋHotelᚑBookingsᚑandᚑReservationᚋgraphᚋmodelᚐRole(ctx, "USER")
+				if err != nil {
+					var zeroVal *model.Payment
+					return zeroVal, err
+				}
+				if ec.Directives.HasRole == nil {
+					var zeroVal *model.Payment
+					return zeroVal, errors.New("directive hasRole is not implemented")
+				}
+				return ec.Directives.HasRole(ctx, nil, directive0, role)
+			}
+
+			next = directive1
+			return next
+		},
 		ec.marshalNPayment2ᚖgithubᚗcomᚋOctoetIxᚋHotelᚑBookingsᚑandᚑReservationᚋgraphᚋmodelᚐPayment,
 		true,
 		true,
@@ -3046,7 +3167,25 @@ func (ec *executionContext) _Mutation_createReview(ctx context.Context, field gr
 			fc := graphql.GetFieldContext(ctx)
 			return ec.Resolvers.Mutation().CreateReview(ctx, fc.Args["input"].(model.CreateReviewInput))
 		},
-		nil,
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				role, err := ec.unmarshalNRole2githubᚗcomᚋOctoetIxᚋHotelᚑBookingsᚑandᚑReservationᚋgraphᚋmodelᚐRole(ctx, "USER")
+				if err != nil {
+					var zeroVal *model.Review
+					return zeroVal, err
+				}
+				if ec.Directives.HasRole == nil {
+					var zeroVal *model.Review
+					return zeroVal, errors.New("directive hasRole is not implemented")
+				}
+				return ec.Directives.HasRole(ctx, nil, directive0, role)
+			}
+
+			next = directive1
+			return next
+		},
 		ec.marshalNReview2ᚖgithubᚗcomᚋOctoetIxᚋHotelᚑBookingsᚑandᚑReservationᚋgraphᚋmodelᚐReview,
 		true,
 		true,
@@ -3101,7 +3240,25 @@ func (ec *executionContext) _Mutation_createRoom(ctx context.Context, field grap
 			fc := graphql.GetFieldContext(ctx)
 			return ec.Resolvers.Mutation().CreateRoom(ctx, fc.Args["input"].(model.CreateRoomInput))
 		},
-		nil,
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				role, err := ec.unmarshalNRole2githubᚗcomᚋOctoetIxᚋHotelᚑBookingsᚑandᚑReservationᚋgraphᚋmodelᚐRole(ctx, "ADMIN")
+				if err != nil {
+					var zeroVal *model.Room
+					return zeroVal, err
+				}
+				if ec.Directives.HasRole == nil {
+					var zeroVal *model.Room
+					return zeroVal, errors.New("directive hasRole is not implemented")
+				}
+				return ec.Directives.HasRole(ctx, nil, directive0, role)
+			}
+
+			next = directive1
+			return next
+		},
 		ec.marshalNRoom2ᚖgithubᚗcomᚋOctoetIxᚋHotelᚑBookingsᚑandᚑReservationᚋgraphᚋmodelᚐRoom,
 		true,
 		true,
@@ -3170,7 +3327,25 @@ func (ec *executionContext) _Mutation_updateRoom(ctx context.Context, field grap
 			fc := graphql.GetFieldContext(ctx)
 			return ec.Resolvers.Mutation().UpdateRoom(ctx, fc.Args["input"].(model.UpdateRoomInput))
 		},
-		nil,
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				role, err := ec.unmarshalNRole2githubᚗcomᚋOctoetIxᚋHotelᚑBookingsᚑandᚑReservationᚋgraphᚋmodelᚐRole(ctx, "ADMIN")
+				if err != nil {
+					var zeroVal *model.Room
+					return zeroVal, err
+				}
+				if ec.Directives.HasRole == nil {
+					var zeroVal *model.Room
+					return zeroVal, errors.New("directive hasRole is not implemented")
+				}
+				return ec.Directives.HasRole(ctx, nil, directive0, role)
+			}
+
+			next = directive1
+			return next
+		},
 		ec.marshalNRoom2ᚖgithubᚗcomᚋOctoetIxᚋHotelᚑBookingsᚑandᚑReservationᚋgraphᚋmodelᚐRoom,
 		true,
 		true,
@@ -3239,7 +3414,25 @@ func (ec *executionContext) _Mutation_updateRoomStatus(ctx context.Context, fiel
 			fc := graphql.GetFieldContext(ctx)
 			return ec.Resolvers.Mutation().UpdateRoomStatus(ctx, fc.Args["roomId"].(string), fc.Args["status"].(model.RoomStatus))
 		},
-		nil,
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				role, err := ec.unmarshalNRole2githubᚗcomᚋOctoetIxᚋHotelᚑBookingsᚑandᚑReservationᚋgraphᚋmodelᚐRole(ctx, "ADMIN")
+				if err != nil {
+					var zeroVal *model.Room
+					return zeroVal, err
+				}
+				if ec.Directives.HasRole == nil {
+					var zeroVal *model.Room
+					return zeroVal, errors.New("directive hasRole is not implemented")
+				}
+				return ec.Directives.HasRole(ctx, nil, directive0, role)
+			}
+
+			next = directive1
+			return next
+		},
 		ec.marshalNRoom2ᚖgithubᚗcomᚋOctoetIxᚋHotelᚑBookingsᚑandᚑReservationᚋgraphᚋmodelᚐRoom,
 		true,
 		true,
@@ -3308,7 +3501,25 @@ func (ec *executionContext) _Mutation_confirmBooking(ctx context.Context, field 
 			fc := graphql.GetFieldContext(ctx)
 			return ec.Resolvers.Mutation().ConfirmBooking(ctx, fc.Args["id"].(string))
 		},
-		nil,
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				role, err := ec.unmarshalNRole2githubᚗcomᚋOctoetIxᚋHotelᚑBookingsᚑandᚑReservationᚋgraphᚋmodelᚐRole(ctx, "ADMIN")
+				if err != nil {
+					var zeroVal *model.Booking
+					return zeroVal, err
+				}
+				if ec.Directives.HasRole == nil {
+					var zeroVal *model.Booking
+					return zeroVal, errors.New("directive hasRole is not implemented")
+				}
+				return ec.Directives.HasRole(ctx, nil, directive0, role)
+			}
+
+			next = directive1
+			return next
+		},
 		ec.marshalNBooking2ᚖgithubᚗcomᚋOctoetIxᚋHotelᚑBookingsᚑandᚑReservationᚋgraphᚋmodelᚐBooking,
 		true,
 		true,
@@ -3383,7 +3594,25 @@ func (ec *executionContext) _Mutation_approveRoom(ctx context.Context, field gra
 			fc := graphql.GetFieldContext(ctx)
 			return ec.Resolvers.Mutation().ApproveRoom(ctx, fc.Args["roomId"].(string))
 		},
-		nil,
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				role, err := ec.unmarshalNRole2githubᚗcomᚋOctoetIxᚋHotelᚑBookingsᚑandᚑReservationᚋgraphᚋmodelᚐRole(ctx, "SUPER_ADMIN")
+				if err != nil {
+					var zeroVal *model.Room
+					return zeroVal, err
+				}
+				if ec.Directives.HasRole == nil {
+					var zeroVal *model.Room
+					return zeroVal, errors.New("directive hasRole is not implemented")
+				}
+				return ec.Directives.HasRole(ctx, nil, directive0, role)
+			}
+
+			next = directive1
+			return next
+		},
 		ec.marshalNRoom2ᚖgithubᚗcomᚋOctoetIxᚋHotelᚑBookingsᚑandᚑReservationᚋgraphᚋmodelᚐRoom,
 		true,
 		true,
@@ -3452,7 +3681,25 @@ func (ec *executionContext) _Mutation_rejectRoom(ctx context.Context, field grap
 			fc := graphql.GetFieldContext(ctx)
 			return ec.Resolvers.Mutation().RejectRoom(ctx, fc.Args["roomId"].(string))
 		},
-		nil,
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				role, err := ec.unmarshalNRole2githubᚗcomᚋOctoetIxᚋHotelᚑBookingsᚑandᚑReservationᚋgraphᚋmodelᚐRole(ctx, "SUPER_ADMIN")
+				if err != nil {
+					var zeroVal *model.Room
+					return zeroVal, err
+				}
+				if ec.Directives.HasRole == nil {
+					var zeroVal *model.Room
+					return zeroVal, errors.New("directive hasRole is not implemented")
+				}
+				return ec.Directives.HasRole(ctx, nil, directive0, role)
+			}
+
+			next = directive1
+			return next
+		},
 		ec.marshalNRoom2ᚖgithubᚗcomᚋOctoetIxᚋHotelᚑBookingsᚑandᚑReservationᚋgraphᚋmodelᚐRoom,
 		true,
 		true,
@@ -3521,7 +3768,25 @@ func (ec *executionContext) _Mutation_promoteToAdmin(ctx context.Context, field 
 			fc := graphql.GetFieldContext(ctx)
 			return ec.Resolvers.Mutation().PromoteToAdmin(ctx, fc.Args["userId"].(string))
 		},
-		nil,
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				role, err := ec.unmarshalNRole2githubᚗcomᚋOctoetIxᚋHotelᚑBookingsᚑandᚑReservationᚋgraphᚋmodelᚐRole(ctx, "SUPER_ADMIN")
+				if err != nil {
+					var zeroVal *model.User
+					return zeroVal, err
+				}
+				if ec.Directives.HasRole == nil {
+					var zeroVal *model.User
+					return zeroVal, errors.New("directive hasRole is not implemented")
+				}
+				return ec.Directives.HasRole(ctx, nil, directive0, role)
+			}
+
+			next = directive1
+			return next
+		},
 		ec.marshalNUser2ᚖgithubᚗcomᚋOctoetIxᚋHotelᚑBookingsᚑandᚑReservationᚋgraphᚋmodelᚐUser,
 		true,
 		true,
@@ -3584,7 +3849,25 @@ func (ec *executionContext) _Mutation_deactivateUser(ctx context.Context, field 
 			fc := graphql.GetFieldContext(ctx)
 			return ec.Resolvers.Mutation().DeactivateUser(ctx, fc.Args["userId"].(string))
 		},
-		nil,
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				role, err := ec.unmarshalNRole2githubᚗcomᚋOctoetIxᚋHotelᚑBookingsᚑandᚑReservationᚋgraphᚋmodelᚐRole(ctx, "SUPER_ADMIN")
+				if err != nil {
+					var zeroVal *model.User
+					return zeroVal, err
+				}
+				if ec.Directives.HasRole == nil {
+					var zeroVal *model.User
+					return zeroVal, errors.New("directive hasRole is not implemented")
+				}
+				return ec.Directives.HasRole(ctx, nil, directive0, role)
+			}
+
+			next = directive1
+			return next
+		},
 		ec.marshalNUser2ᚖgithubᚗcomᚋOctoetIxᚋHotelᚑBookingsᚑandᚑReservationᚋgraphᚋmodelᚐUser,
 		true,
 		true,
@@ -3883,7 +4166,25 @@ func (ec *executionContext) _Query_me(ctx context.Context, field graphql.Collect
 		func(ctx context.Context) (any, error) {
 			return ec.Resolvers.Query().Me(ctx)
 		},
-		nil,
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				role, err := ec.unmarshalNRole2githubᚗcomᚋOctoetIxᚋHotelᚑBookingsᚑandᚑReservationᚋgraphᚋmodelᚐRole(ctx, "USER")
+				if err != nil {
+					var zeroVal *model.User
+					return zeroVal, err
+				}
+				if ec.Directives.HasRole == nil {
+					var zeroVal *model.User
+					return zeroVal, errors.New("directive hasRole is not implemented")
+				}
+				return ec.Directives.HasRole(ctx, nil, directive0, role)
+			}
+
+			next = directive1
+			return next
+		},
 		ec.marshalNUser2ᚖgithubᚗcomᚋOctoetIxᚋHotelᚑBookingsᚑandᚑReservationᚋgraphᚋmodelᚐUser,
 		true,
 		true,
@@ -4096,7 +4397,25 @@ func (ec *executionContext) _Query_myBookings(ctx context.Context, field graphql
 			fc := graphql.GetFieldContext(ctx)
 			return ec.Resolvers.Query().MyBookings(ctx, fc.Args["pagination"].(*model.PaginationInput))
 		},
-		nil,
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				role, err := ec.unmarshalNRole2githubᚗcomᚋOctoetIxᚋHotelᚑBookingsᚑandᚑReservationᚋgraphᚋmodelᚐRole(ctx, "USER")
+				if err != nil {
+					var zeroVal *model.BookingConnection
+					return zeroVal, err
+				}
+				if ec.Directives.HasRole == nil {
+					var zeroVal *model.BookingConnection
+					return zeroVal, errors.New("directive hasRole is not implemented")
+				}
+				return ec.Directives.HasRole(ctx, nil, directive0, role)
+			}
+
+			next = directive1
+			return next
+		},
 		ec.marshalNBookingConnection2ᚖgithubᚗcomᚋOctoetIxᚋHotelᚑBookingsᚑandᚑReservationᚋgraphᚋmodelᚐBookingConnection,
 		true,
 		true,
@@ -4147,7 +4466,25 @@ func (ec *executionContext) _Query_booking(ctx context.Context, field graphql.Co
 			fc := graphql.GetFieldContext(ctx)
 			return ec.Resolvers.Query().Booking(ctx, fc.Args["id"].(string))
 		},
-		nil,
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				role, err := ec.unmarshalNRole2githubᚗcomᚋOctoetIxᚋHotelᚑBookingsᚑandᚑReservationᚋgraphᚋmodelᚐRole(ctx, "USER")
+				if err != nil {
+					var zeroVal *model.Booking
+					return zeroVal, err
+				}
+				if ec.Directives.HasRole == nil {
+					var zeroVal *model.Booking
+					return zeroVal, errors.New("directive hasRole is not implemented")
+				}
+				return ec.Directives.HasRole(ctx, nil, directive0, role)
+			}
+
+			next = directive1
+			return next
+		},
 		ec.marshalNBooking2ᚖgithubᚗcomᚋOctoetIxᚋHotelᚑBookingsᚑandᚑReservationᚋgraphᚋmodelᚐBooking,
 		true,
 		true,
@@ -4222,7 +4559,25 @@ func (ec *executionContext) _Query_users(ctx context.Context, field graphql.Coll
 			fc := graphql.GetFieldContext(ctx)
 			return ec.Resolvers.Query().Users(ctx, fc.Args["pagination"].(*model.PaginationInput))
 		},
-		nil,
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				role, err := ec.unmarshalNRole2githubᚗcomᚋOctoetIxᚋHotelᚑBookingsᚑandᚑReservationᚋgraphᚋmodelᚐRole(ctx, "ADMIN")
+				if err != nil {
+					var zeroVal *model.UserConnection
+					return zeroVal, err
+				}
+				if ec.Directives.HasRole == nil {
+					var zeroVal *model.UserConnection
+					return zeroVal, errors.New("directive hasRole is not implemented")
+				}
+				return ec.Directives.HasRole(ctx, nil, directive0, role)
+			}
+
+			next = directive1
+			return next
+		},
 		ec.marshalNUserConnection2ᚖgithubᚗcomᚋOctoetIxᚋHotelᚑBookingsᚑandᚑReservationᚋgraphᚋmodelᚐUserConnection,
 		true,
 		true,
@@ -4273,7 +4628,25 @@ func (ec *executionContext) _Query_user(ctx context.Context, field graphql.Colle
 			fc := graphql.GetFieldContext(ctx)
 			return ec.Resolvers.Query().User(ctx, fc.Args["id"].(string))
 		},
-		nil,
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				role, err := ec.unmarshalNRole2githubᚗcomᚋOctoetIxᚋHotelᚑBookingsᚑandᚑReservationᚋgraphᚋmodelᚐRole(ctx, "ADMIN")
+				if err != nil {
+					var zeroVal *model.User
+					return zeroVal, err
+				}
+				if ec.Directives.HasRole == nil {
+					var zeroVal *model.User
+					return zeroVal, errors.New("directive hasRole is not implemented")
+				}
+				return ec.Directives.HasRole(ctx, nil, directive0, role)
+			}
+
+			next = directive1
+			return next
+		},
 		ec.marshalOUser2ᚖgithubᚗcomᚋOctoetIxᚋHotelᚑBookingsᚑandᚑReservationᚋgraphᚋmodelᚐUser,
 		true,
 		false,
@@ -4336,7 +4709,25 @@ func (ec *executionContext) _Query_adminBookings(ctx context.Context, field grap
 			fc := graphql.GetFieldContext(ctx)
 			return ec.Resolvers.Query().AdminBookings(ctx, fc.Args["pagination"].(*model.PaginationInput))
 		},
-		nil,
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				role, err := ec.unmarshalNRole2githubᚗcomᚋOctoetIxᚋHotelᚑBookingsᚑandᚑReservationᚋgraphᚋmodelᚐRole(ctx, "ADMIN")
+				if err != nil {
+					var zeroVal *model.BookingConnection
+					return zeroVal, err
+				}
+				if ec.Directives.HasRole == nil {
+					var zeroVal *model.BookingConnection
+					return zeroVal, errors.New("directive hasRole is not implemented")
+				}
+				return ec.Directives.HasRole(ctx, nil, directive0, role)
+			}
+
+			next = directive1
+			return next
+		},
 		ec.marshalNBookingConnection2ᚖgithubᚗcomᚋOctoetIxᚋHotelᚑBookingsᚑandᚑReservationᚋgraphᚋmodelᚐBookingConnection,
 		true,
 		true,
@@ -4387,7 +4778,25 @@ func (ec *executionContext) _Query_allBookings(ctx context.Context, field graphq
 			fc := graphql.GetFieldContext(ctx)
 			return ec.Resolvers.Query().AllBookings(ctx, fc.Args["pagination"].(*model.PaginationInput))
 		},
-		nil,
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				role, err := ec.unmarshalNRole2githubᚗcomᚋOctoetIxᚋHotelᚑBookingsᚑandᚑReservationᚋgraphᚋmodelᚐRole(ctx, "SUPER_ADMIN")
+				if err != nil {
+					var zeroVal *model.BookingConnection
+					return zeroVal, err
+				}
+				if ec.Directives.HasRole == nil {
+					var zeroVal *model.BookingConnection
+					return zeroVal, errors.New("directive hasRole is not implemented")
+				}
+				return ec.Directives.HasRole(ctx, nil, directive0, role)
+			}
+
+			next = directive1
+			return next
+		},
 		ec.marshalNBookingConnection2ᚖgithubᚗcomᚋOctoetIxᚋHotelᚑBookingsᚑandᚑReservationᚋgraphᚋmodelᚐBookingConnection,
 		true,
 		true,
@@ -4438,7 +4847,25 @@ func (ec *executionContext) _Query_auditLogs(ctx context.Context, field graphql.
 			fc := graphql.GetFieldContext(ctx)
 			return ec.Resolvers.Query().AuditLogs(ctx, fc.Args["filter"].(*model.AuditLogFilterInput), fc.Args["pagination"].(*model.PaginationInput))
 		},
-		nil,
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				role, err := ec.unmarshalNRole2githubᚗcomᚋOctoetIxᚋHotelᚑBookingsᚑandᚑReservationᚋgraphᚋmodelᚐRole(ctx, "SUPER_ADMIN")
+				if err != nil {
+					var zeroVal *model.AuditLogConnection
+					return zeroVal, err
+				}
+				if ec.Directives.HasRole == nil {
+					var zeroVal *model.AuditLogConnection
+					return zeroVal, errors.New("directive hasRole is not implemented")
+				}
+				return ec.Directives.HasRole(ctx, nil, directive0, role)
+			}
+
+			next = directive1
+			return next
+		},
 		ec.marshalNAuditLogConnection2ᚖgithubᚗcomᚋOctoetIxᚋHotelᚑBookingsᚑandᚑReservationᚋgraphᚋmodelᚐAuditLogConnection,
 		true,
 		true,
@@ -5573,7 +6000,25 @@ func (ec *executionContext) _User_email(ctx context.Context, field graphql.Colle
 		func(ctx context.Context) (any, error) {
 			return obj.Email, nil
 		},
-		nil,
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				role, err := ec.unmarshalNRole2githubᚗcomᚋOctoetIxᚋHotelᚑBookingsᚑandᚑReservationᚋgraphᚋmodelᚐRole(ctx, "ADMIN")
+				if err != nil {
+					var zeroVal string
+					return zeroVal, err
+				}
+				if ec.Directives.HasRole == nil {
+					var zeroVal string
+					return zeroVal, errors.New("directive hasRole is not implemented")
+				}
+				return ec.Directives.HasRole(ctx, obj, directive0, role)
+			}
+
+			next = directive1
+			return next
+		},
 		ec.marshalNString2string,
 		true,
 		true,
@@ -7637,7 +8082,7 @@ func (ec *executionContext) unmarshalInputLoginInput(ctx context.Context, obj an
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"email", "password"}
+	fieldsInOrder := [...]string{"email", "password", "deviceID", "deviceName", "ipAddress", "userAgent"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -7658,6 +8103,34 @@ func (ec *executionContext) unmarshalInputLoginInput(ctx context.Context, obj an
 				return it, err
 			}
 			it.Password = data
+		case "deviceID":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("deviceID"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.DeviceID = data
+		case "deviceName":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("deviceName"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.DeviceName = data
+		case "ipAddress":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("ipAddress"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.IPAddress = data
+		case "userAgent":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("userAgent"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.UserAgent = data
 		}
 	}
 	return it, nil
@@ -8280,6 +8753,13 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 		case "login":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_login(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "logoutAllDevices":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_logoutAllDevices(ctx, field)
 			})
 			if out.Values[i] == graphql.Null {
 				out.Invalids++

@@ -1,6 +1,9 @@
-package audit_logs
+package audit
 
-import "time"
+import (
+	"context"
+	"time"
+)
 
 type AuditFilter struct {
 	UserID     *uint
@@ -13,6 +16,12 @@ type AuditFilter struct {
 }
 
 type Repository interface {
-	Save(log *AuditLog) error
-	FindWithFilter(filter AuditFilter, page, limit int) ([]AuditLog, int64, error)
+		Save(ctx context.Context, log *AuditLog) error
+
+	FindWithFilter(
+		ctx context.Context,
+		filter AuditFilter,
+		page int,
+		limit int,
+	) ([]AuditLog, int64, error)
 }

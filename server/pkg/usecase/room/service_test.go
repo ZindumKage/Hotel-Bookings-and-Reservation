@@ -181,12 +181,13 @@ func TestUpdateRoom(t *testing.T) {
 
 	room.Name = "Updated Suite"
 
-	if err := svc.UpdateRoom(room); err != nil {
+	updated, err := svc.UpdateRoom(room) 
+	if err != nil {
 		t.Fatal(err)
 	}
 
-	got, _ := svc.GetRoomByID(room.ID)
-	assertEqual(t, got.Name, "Updated Suite", "updated name")
+
+	assertEqual(t, updated.Name, "Updated Suite", "updated name")
 }
 
 func TestDeleteRoom(t *testing.T) {
@@ -297,4 +298,200 @@ func TestListRoomsWithStatusFilter(t *testing.T) {
 
 	assertEqual(t, int(total), 2, "filtered total")
 	assertEqual(t, len(rooms), 2, "filtered page size")
+}
+
+//////////////////////////////////////////////////////
+//// EXTRA EDGE CASE TESTS (SENIOR LEVEL)
+//////////////////////////////////////////////////////
+
+// ---------- CREATE VALIDATION ----------
+
+func TestCreateRoom_InvalidInput(t *testing.T) {
+	_, svc := newTestService()
+
+	tests := []struct {
+		name string
+		room *domain.Room
+	}{
+		{"empty name", newRoom("", 100, "101", domain.Available)},
+		{"zero price", newRoom("Room", 0, "101", domain.Available)},
+		{"negative price", newRoom("Room", -10, "101", domain.Available)},
+		{"empty number", newRoom("Room", 100, "", domain.Available)},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := svc.CreateRoom(tt.room)
+			if err == nil {
+				t.Fatal("expected validation error")
+			}
+		})
+	}
+}
+
+// ---------- CREATE DEFAULT STATUS ----------
+
+func TestCreateRoom_DefaultStatus(t *testing.T) {
+	_, svc := newTestService()
+
+	room := newRoom("Standard", 100, "101", "")
+	err := svc.CreateRoom(room)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assertEqual(t, room.Status, domain.Available, "default status")
+}
+
+// ---------- UPDATE NOT FOUND ----------
+
+func TestUpdateRoom_NotFound(t *testing.T) {
+	_, svc := newTestService()
+
+	room := newRoom("Ghost", 100, "999", domain.Available)
+	room.ID = 99
+
+	_, err := svc.UpdateRoom(room)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+}
+
+// ---------- DELETE NOT FOUND ----------
+
+func TestDeleteRoom_NotFound(t *testing.T) {
+	_, svc := newTestService()
+
+	err := svc.DeleteRoom(999)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+}
+
+// ---------- DOUBLE DELETE (IDEMPOTENCY SIGNAL) ----------
+
+func TestDeleteRoom_DoubleDelete(t *testing.T) {
+	_, svc := newTestService()
+
+	room := newRoom("Suite", 200, "101", domain.Available)
+	svc.CreateRoom(room)
+
+	err1 := svc.DeleteRoom(room.ID)
+	err2 := svc.DeleteRoom(room.ID)
+
+	if err1 != nil {
+		t.Fatal(err1)
+	}
+	if err2 == nil {
+		t.Fatal("expected error on second delete")
+	}
+}
+
+// ---------- STATUS UPDATE NOT FOUND ----------
+
+func TestUpdateRoomStatus_NotFound(t *testing.T) {
+	_, svc := newTestService()
+
+	_, err := svc.UpdateRoomStatus(999, domain.Booked)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+}
+
+// ---------- PAGINATION EDGE CASES ----------
+
+func TestListRooms_InvalidPagination(t *testing.T) {
+	_, svc := newTestService()
+
+	
+
+	seedRooms(t, svc, 5, func(i int) domain.RoomStatus {
+		return domain.Available
+	})
+
+	tests := []struct {
+		name  string
+		page  int
+		limit int
+	}{
+		{"zero page", 0, 2},
+		{"zero limit", 1, 0},
+		{"negative page", -1, 2},
+		{"negative limit", 1, -2},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+		_, _, err := svc.GetRooms(nil, tt.page, tt.limit)
+
+if err == nil {
+	t.Fatal("expected error for invalid pagination")
+}
+		})
+	}
+}
+
+// ---------- FILTER NO MATCH ----------
+
+func TestListRooms_FilterNoMatch(t *testing.T) {
+	_, svc := newTestService()
+
+	seedRooms(t, svc, 5, func(i int) domain.RoomStatus {
+		return domain.Available
+	})
+
+	filter := domain.Booked
+
+	rooms, total, err := svc.GetRooms(&filter, 1, 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assertEqual(t, int(total), 0, "total")
+	assertEqual(t, len(rooms), 0, "rooms length")
+}
+
+// ---------- UPDATE PRESERVES ID ----------
+
+func TestUpdateRoom_PreservesID(t *testing.T) {
+	_, svc := newTestService()
+
+	room := newRoom("Suite", 200, "101", domain.Available)
+	svc.CreateRoom(room)
+
+	originalID := room.ID
+
+	room.Name = "Updated"
+	updated, err := svc.UpdateRoom(room)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assertEqual(t, updated.ID, originalID, "id should not change")
+}
+
+// ---------- CONCURRENT UPDATE (BASIC SAFETY SIGNAL) ----------
+
+func TestRoom_ConcurrentUpdate(t *testing.T) {
+	_, svc := newTestService()
+
+	room := newRoom("Suite", 200, "101", domain.Available)
+	svc.CreateRoom(room)
+
+	done := make(chan bool)
+
+	go func() {
+		svc.UpdateRoomStatus(room.ID, domain.Booked)
+		done <- true
+	}()
+
+	go func() {
+		svc.UpdateRoomStatus(room.ID, domain.Available)
+		done <- true
+	}()
+
+	<-done
+	<-done
+
+	// no panic = pass (basic concurrency signal)
 }

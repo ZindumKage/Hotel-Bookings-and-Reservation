@@ -5,6 +5,7 @@ import (
 	"github.com/OctoetIx/Hotel-Bookings-and-Reservation/pkg/usecase/booking"
 	"github.com/OctoetIx/Hotel-Bookings-and-Reservation/pkg/usecase/room"
 	"github.com/OctoetIx/Hotel-Bookings-and-Reservation/pkg/usecase/user"
+	
 )
 
 // This file will not be regenerated automatically.
@@ -21,9 +22,10 @@ func valueOrEmpty(s *string) string {
 	}	
 
 type Resolver struct{
-	UserService user.Service
-	AuditLogService audit_logs.Service
-	RoomService room.Service
-	BookingService booking.Service
+	UserService *user.Service
+	AuditLogService *audit_logs.Service
+	RoomService *room.Service
+	BookingService *booking.Service
 	
 }
+

@@ -1,9 +1,9 @@
-package booking
+package repositories
 
 import (
 	domain "github.com/OctoetIx/Hotel-Bookings-and-Reservation/pkg/domain/booking"
 	"github.com/OctoetIx/Hotel-Bookings-and-Reservation/pkg/infrastructure/database/models"
-	"gorm.io/gorm"
+	
 )
 
 
@@ -35,7 +35,7 @@ func toDomain(m *models.Booking) *domain.Booking {
 
 func toModel(d *domain.Booking) *models.Booking {
 	return &models.Booking{
-		Model:         gorm.Model{ID: d.ID},
+		ID: 		   d.ID,
 		Reference:     d.Reference,
 		UserID:        d.UserID,
 		RoomID:        d.RoomID,

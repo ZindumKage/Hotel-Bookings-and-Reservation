@@ -1,4 +1,4 @@
-package audit_logs
+package audit
 
 import (
 	"encoding/json"
@@ -17,26 +17,24 @@ const (
 type AuditLog struct {
 	ID uint
 
-	// Actor
 	UserID    uint
 	UserEmail string
 	UserRole  string
 
-	// Action
 	Action   string
 	Entity   string
 	EntityID string
 
-	// State changes
 	BeforeState   json.RawMessage
 	AfterState    json.RawMessage
 	ChangedFields json.RawMessage
 
-	// Risk
 	RiskLevel  RiskLevel
 	Suspicious bool
 	Reason     string
 
-	// Metadata
+	IPAddress string
+	UserAgent string
+
 	CreatedAt time.Time
 }

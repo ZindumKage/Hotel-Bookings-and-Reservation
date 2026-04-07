@@ -12,7 +12,7 @@ import (
 )
 
 // mapToGraphQLModel converts a slice of domain AuditLog to a slice of GraphQL AuditLog
-func convertAuditLogs(logs []audit_logs.AuditLog) []*model.AuditLog {
+func convertAuditLogs(logs []audit.AuditLog) []*model.AuditLog {
 	result := make([]*model.AuditLog, len(logs))
 	for i, log := range logs {
 		result[i] = &model.AuditLog{
@@ -101,4 +101,9 @@ func MapToGraphQLBooking(b *booking.Booking) *model.Booking {
 		ExpiresAt:   b.ExpiresAt,
 		CancelledAt: b.CancelledAt,
 	}
+}
+
+func parseID(id string) uint {
+	i, _ := strconv.Atoi(id)
+	return uint(i)
 }

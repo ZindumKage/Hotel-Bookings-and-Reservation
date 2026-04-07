@@ -1,4 +1,4 @@
-package user
+package repositories
 
 import (
 	"github.com/OctoetIx/Hotel-Bookings-and-Reservation/pkg/domain/common"
@@ -6,12 +6,11 @@ import (
 	"github.com/OctoetIx/Hotel-Bookings-and-Reservation/pkg/infrastructure/database/models"
 )
 
-
-
-func ToUserModel(u *user.User) *models.UserModel{
+func ToUserModel(u *user.User) *models.UserModel {
 	if u == nil {
 		return nil
 	}
+
 	return &models.UserModel{
 		ID: u.ID,
 		Name: u.Name,
@@ -19,13 +18,16 @@ func ToUserModel(u *user.User) *models.UserModel{
 		Password: u.Password,
 		Role: string(u.Role),
 		IsActive: u.IsActive,
+		IsEmailVerified: u.IsEmailVerified,
+		FailedLoginAttempts: u.FailedLoginAttempts,
+		AccountLockedUntil: u.AccountLockedUntil,
 	}
 }
-
 func ToUserDomain(m *models.UserModel) *user.User {
 	if m == nil {
 		return nil
 	}
+
 	return &user.User{
 		ID: m.ID,
 		Name: m.Name,
@@ -33,13 +35,18 @@ func ToUserDomain(m *models.UserModel) *user.User {
 		Password: m.Password,
 		Role: common.Role(m.Role),
 		IsActive: m.IsActive,
+		IsEmailVerified: m.IsEmailVerified,
+		FailedLoginAttempts: m.FailedLoginAttempts,
+		AccountLockedUntil: m.AccountLockedUntil,
 	}
 }
 
 func ToUserDomains(models []models.UserModel) []*user.User {
 	var result []*user.User
+
 	for i := range models {
 		result = append(result, ToUserDomain(&models[i]))
 	}
+
 	return result
 }

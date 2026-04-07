@@ -1,4 +1,4 @@
-package review
+package repositories
 
 import (
 	domain "github.com/OctoetIx/Hotel-Bookings-and-Reservation/pkg/domain/review"

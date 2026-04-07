@@ -48,8 +48,8 @@ type Booking struct {
 	ExpiresAt   time.Time  `json:"expiresAt"`
 	CancelledAt *time.Time `json:"cancelledAt,omitempty"`
 
-	CreatedBy uint `json:"createdBy"`
-	UpdatedBy uint `json:"updatedBy"`
+	CreatedAt time.Time `json:"createdAt"`
+	UpdatedAt time.Time `json:"updatedAt"`
 }
 
 func (b *Booking) ValidateDates() error {

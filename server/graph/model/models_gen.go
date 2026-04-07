@@ -105,8 +105,12 @@ type CreateRoomInput struct {
 }
 
 type LoginInput struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
+	Email      string  `json:"email"`
+	Password   string  `json:"password"`
+	DeviceID   string  `json:"deviceID"`
+	DeviceName *string `json:"deviceName,omitempty"`
+	IPAddress  *string `json:"ipAddress,omitempty"`
+	UserAgent  *string `json:"userAgent,omitempty"`
 }
 
 type MakePaymentInput struct {
