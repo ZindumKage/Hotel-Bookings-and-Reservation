@@ -37,13 +37,14 @@ func InitServices() {
 
 	rateLimiter := redisinfra.NewRedisRateLimiter(Redis)
 	tokenBlacklist := redisinfra.NewRedisBlacklist(Redis)
+	locker := redisinfra.NewRedisLocker(Redis)
 
 	publisher := audit_logs.NewLogPublisher()
 
 	AuditLogService = audit_logs.NewService(auditRepo, publisher)
 
 	UserService = user.NewService(userRepo, rateLimiter, sessionRepo , AuditLogService, tokenBlacklist )
-	RoomService = room.NewService(roomRepo)
-	BookingService = booking.NewService(bookingRepo)
+	RoomService = room.NewService(roomRepo, locker, Redis)
+	BookingService = booking.NewService(bookingRepo, roomRepo, locker, Redis)
 	AuditLogService = audit_logs.NewService(auditRepo, publisher)
 }

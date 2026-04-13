@@ -220,10 +220,10 @@ func (s *Service) DeleteRoom(ctx context.Context, id uint) error {
 func (s *Service) UpdateRoomStatus(
 	ctx context.Context,
 	roomID uint,
-	status string,
+	status room.RoomStatus,
 ) (*room.Room, error) {
 
-	if !isValidStatus(status) {
+	if !isValidStatus(status ) {
 		return nil, errors.New("invalid room status")
 	}
 
@@ -309,8 +309,8 @@ func (s *Service) invalidateRoomsCache(ctx context.Context) {
    HELPERS
 ========================= */
 
-func isValidStatus(s string) bool {
-	switch room.RoomStatus(s) {
+func isValidStatus(s room.RoomStatus) bool {
+	switch s {
 	case room.Available, room.Booked, room.Maintenance:
 		return true
 	default:

@@ -167,7 +167,7 @@ func (r *mutationResolver) CreateRoom(ctx context.Context, input model.CreateRoo
 		Amenities:   input.Amenities,
 	}
 
-	if err := r.RoomService.CreateRoom(room); err != nil {
+	if err := r.RoomService.CreateRoom(ctx, room); err != nil {
 		return nil, err
 	}
 
@@ -209,7 +209,7 @@ func (r *mutationResolver) UpdateRoom(ctx context.Context, input model.UpdateRoo
 		roomToUpdate.Amenities = input.Amenities
 	}
 
-	rm, err := r.RoomService.UpdateRoom(roomToUpdate)
+	rm, err := r.RoomService.UpdateRoom(ctx, roomToUpdate)
 	if err != nil {
 		return nil, err
 	}
@@ -224,7 +224,7 @@ func (r *mutationResolver) UpdateRoomStatus(ctx context.Context, roomID string, 
 		return nil, fmt.Errorf("invalid room id: %s", roomID)
 	}
 
-	rm, err := r.RoomService.UpdateRoomStatus(uint(id), room.RoomStatus(status))
+	rm, err := r.RoomService.UpdateRoomStatus(ctx, uint(id), room.RoomStatus(status))
 	if err != nil {
 		return nil, err
 	}
@@ -263,7 +263,7 @@ func (r *mutationResolver) ApproveRoom(ctx context.Context, roomID string) (*mod
 		return nil, fmt.Errorf("invalid room id")
 	}
 
-	rm, err := r.RoomService.UpdateRoomStatus(uint(id), room.Available)
+	rm, err := r.RoomService.UpdateRoomStatus(ctx, uint(id), room.Available)
 	if err != nil {
 		return nil, err
 	}
@@ -286,7 +286,7 @@ func (r *mutationResolver) RejectRoom(ctx context.Context, roomID string) (*mode
 		return nil, fmt.Errorf("invalid room id")
 	}
 
-	rm, err := r.RoomService.UpdateRoomStatus(uint(id), room.Maintenance)
+	rm, err := r.RoomService.UpdateRoomStatus(ctx, uint(id), room.Maintenance)
 	if err != nil {
 		return nil, err
 	}
@@ -377,7 +377,7 @@ func (r *queryResolver) Room(ctx context.Context, id string) (*model.Room, error
 		return nil, fmt.Errorf("invalid room id")
 	}
 
-	rm, err := r.RoomService.GetRoomByID(uint(roomID))
+	rm, err := r.RoomService.GetRoomByID(ctx, uint(roomID))
 	if err != nil {
 		return nil, err
 	}
@@ -414,7 +414,7 @@ func (r *queryResolver) Rooms(ctx context.Context, status *model.RoomStatus, pag
 		}
 	}
 
-	rooms, total, err := r.RoomService.GetRooms(domainStatus, page, limit)
+	rooms, total, err := r.RoomService.GetRooms(ctx,domainStatus, page, limit )
 	if err != nil {
 		return nil, err
 	}
